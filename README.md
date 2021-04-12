@@ -10,8 +10,8 @@ integrate Gate.io tradings.
 
 Supported languages are:
 
-- [Python](https://github.com/gateio/gatews/python)
-- [Golang](https://github.com/gateio/gatews/go)
+- [Python](python)
+- [Golang](go)
 
 Refer to corresponding directory for usage.
 
