@@ -144,7 +144,7 @@ func (ws *WsService) SetCallBack(channel string, call callBack) {
 	ws.calls.Store(channel, call)
 }
 
-func (ws *WsService, ) Subscribe(channel string, payload []string) error {
+func (ws *WsService) Subscribe(channel string, payload []string) error {
 	if (ws.conf.Key == "" || ws.conf.Secret == "") && authChannel[channel] {
 		return newAuthEmptyErr()
 	}
@@ -182,6 +182,6 @@ func (ws *WsService, ) Subscribe(channel string, payload []string) error {
 	return ws.baseSubscribe(Subscribe, payload, ChannelPublicTrade)
 }
 
-func (ws *WsService, ) UnSubscribe(channel string, payload []string) error {
+func (ws *WsService) UnSubscribe(channel string, payload []string) error {
 	return ws.baseSubscribe(UnSubscribe, payload, channel)
 }
