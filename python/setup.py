@@ -7,7 +7,7 @@ setup(
     name='gate-ws',
     version=VERSION,
     packages=find_packages(),
-    url='https://github.com/gateio/gatews/python',
+    url='https://github.com/gateio/gatews',
     install_requires=REQUIRES,
     license='MIT License',
     author='gateio',
