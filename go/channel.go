@@ -179,7 +179,7 @@ func (ws *WsService) Subscribe(channel string, payload []string) error {
 			}
 		}
 	}()
-	return ws.baseSubscribe(Subscribe, payload, ChannelPublicTrade)
+	return ws.baseSubscribe(Subscribe, payload, channel)
 }
 
 func (ws *WsService) UnSubscribe(channel string, payload []string) error {
