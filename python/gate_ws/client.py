@@ -33,10 +33,28 @@ class Configuration(object):
                  host: str = None,
                  api_key: str = '',
                  api_secret: str = '',
+                 event_loop=None,
                  executor_pool=None,
                  default_callback=None,
                  ping_interval: int = 5,
                  max_retry: int = 10):
+        """Initialize running configuration
+
+        @param app: Which websocket to connect to, spot or futures, default to spot
+        @param settle: If app is futures, which settle currency to use, btc or usdt
+        @param test_net: If app is futures, whether use test net
+        @param host: Websocket host, inferred from app, settle and test_net if not provided
+        @param api_key: APIv4 Key, must not be empty if subscribing to private channels
+        @param api_secret: APIv4 Secret, must not be empty if subscribing to private channels
+        @param event_loop: Event loop to use. default to asyncio default event loop
+        @param executor_pool: Your callback executor pool. Default to asyncio default event loop if callback is
+        awaitable, otherwise asyncio default concurrent.futures.Executor executor
+        @param default_callback: Default callback function for all channels. If channels specific callback is not
+        provided, it will be called instead
+        @param ping_interval: Active ping interval to websocket server, default to 5 seconds
+        @param max_retry: Connection retry times on connection to server lost. Reconnect will be given up if
+        max_retry reached. No upper limit if negative. Default to 10.
+        """
         self.app = app
         self.api_key = api_key
         self.api_secret = api_secret
@@ -46,6 +64,7 @@ class Configuration(object):
             if test_net:
                 default_host = 'wss://fx-ws-testnet.gateio.ws/v4/ws/%s' % settle
         self.host = host or default_host
+        self.loop = event_loop
         self.pool = executor_pool
         self.default_callback = default_callback
         self.ping_interval = ping_interval
@@ -69,21 +88,17 @@ class WebSocketResponse(object):
             self.error = GateWebsocketError(msg['error'].get('code'), msg['error'].get('message'))
 
 
-Callback = typing.NewType("WebSocketCallback",
-                          typing.Union[typing.Callable[[WebSocketResponse], None],
-                                       typing.Awaitable])
-
-
 class Connection(object):
 
     def __init__(self, cfg: Configuration):
         self.cfg = cfg
-        self.channels: typing.Dict[str, Callback] = dict()
+        self.channels: typing.Dict[str, typing.Any] = dict()
         self.sending_queue = asyncio.Queue()
         self.sending_history = list()
+        self.event_loop: asyncio.AbstractEventLoop = cfg.loop or asyncio.get_event_loop()
         self.main_loop = None
 
-    def register(self, channel, callback: Callback = None):
+    def register(self, channel, callback=None):
         if callback:
             self.channels[channel] = callback
 
@@ -114,9 +129,9 @@ class Connection(object):
             callback = self.channels.get(response.channel, self.cfg.default_callback)
             if callback is not None:
                 if asyncio.iscoroutinefunction(callback):
-                    asyncio.create_task(callback(self, response))
+                    self.event_loop.create_task(callback(self, response))
                 else:
-                    asyncio.get_event_loop().run_in_executor(self.cfg.pool, callback, self, response)
+                    self.event_loop.run_in_executor(self.cfg.pool, callback, self, response)
 
     def close(self):
         if self.main_loop:
@@ -144,9 +159,9 @@ class Connection(object):
             else:
                 tasks: typing.List[asyncio.Task] = list()
                 try:
-                    tasks.append(asyncio.create_task(self._write(conn), name='write'))
-                    tasks.append(asyncio.create_task(self._read(conn), name='read'))
-                    tasks.append(asyncio.create_task(self._active_ping(conn), name='ping'))
+                    tasks.append(self.event_loop.create_task(self._write(conn)))
+                    tasks.append(self.event_loop.create_task(self._read(conn)))
+                    tasks.append(self.event_loop.create_task(self._active_ping(conn)))
                     self.main_loop = asyncio.gather(*tasks)
                     await self.main_loop
                 except websockets.ConnectionClosed:
@@ -164,7 +179,7 @@ class BaseChannel(abc.ABC):
     name = ''
     require_auth = False
 
-    def __init__(self, conn: Connection, callback: Callback = None):
+    def __init__(self, conn: Connection, callback=None):
         self.conn = conn
         self.callback = callback
         self.cfg = self.conn.cfg

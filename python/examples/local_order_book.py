@@ -242,7 +242,7 @@ class OrderBookFrame(Frame):
         # Internal state required for doing periodic updates
         self._last_frame = 0
         self._ob = order_book
-        self._level = screen.height//2-1
+        self._level = screen.height // 2 - 1
 
         # Create the basic form layout...
         layout = Layout([1], fill_frame=True)
@@ -250,14 +250,14 @@ class OrderBookFrame(Frame):
         self._header.disabled = True
         self._header.custom_colour = "label"
         self._asks = MultiColumnListBox(
-            screen.height//2,
+            screen.height // 2,
             ["<25%", "<25%", "<25%"],
             [],
             titles=["Level", "Price", "Amount"],
             name="ask_book",
             parser=AsciimaticsParser())
         self._bids = MultiColumnListBox(
-            screen.height//2,
+            screen.height // 2,
             ["<25%", "<25%", "<25%"],
             [],
             titles=["Level", "Price", "Amount"],
@@ -283,11 +283,11 @@ class OrderBookFrame(Frame):
 
             # Create the data to go in the multi-column list
             ask_data = [
-                (["#%02d" % (self._level-i), str(x.price), x.amount], i)
+                (["#%02d" % (self._level - i), str(x.price), x.amount], i)
                 for i, x in enumerate(reversed(self._ob.asks[:self._level]))
             ]
             bid_data = [
-                (["#%02d" % (i+1), str(x.price), x.amount], i) for i, x in enumerate(self._ob.bids[:self._level])
+                (["#%02d" % (i + 1), str(x.price), x.amount], i) for i, x in enumerate(self._ob.bids[:self._level])
             ]
             self._asks.options = ask_data
             self._bids.options = bid_data
@@ -325,13 +325,13 @@ if __name__ == '__main__':
 
     screen = Screen.open()
     screen.set_scenes([Scene([OrderBookFrame(screen, order_book)], -1)])
-    loop.create_task(order_book.run(), name='local order book')
-    loop.create_task(conn.run(), name='websocket connection')
-    loop.create_task(play_order_book(screen), name='animation')
+    loop.create_task(order_book.run())
+    loop.create_task(conn.run())
+    loop.create_task(play_order_book(screen))
     try:
         loop.run_forever()
     except KeyboardInterrupt:
-        for task in asyncio.all_tasks(loop):
+        for task in asyncio.Task.all_tasks(loop):
             task.cancel()
         screen.close()
         loop.close()

@@ -7,4 +7,4 @@ from gate_ws.client import Connection
 from gate_ws.client import GateWebsocketError
 from gate_ws.client import WebSocketResponse
 
-__all__ = [Configuration, Configuration, GateWebsocketError, WebSocketResponse]
+__all__ = [Configuration, Connection, GateWebsocketError, WebSocketResponse]
