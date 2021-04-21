@@ -71,6 +71,35 @@ class Configuration(object):
         self.max_retry = max_retry
 
 
+class WebSocketRequest(object):
+
+    def __init__(self, cfg: Configuration, channel: str, event: str, payload: str, require_auth: bool):
+        self.channel = channel
+        self.event = event
+        self.payload = payload
+        self.require_auth = require_auth
+        self.cfg = cfg
+
+    def __str__(self):
+        request = {
+            'time': int(time.time()),
+            'channel': self.channel,
+            'event': self.event,
+            'payload': self.payload,
+        }
+        if self.require_auth:
+            if not (self.cfg.api_key and self.cfg.api_secret):
+                raise ValueError("configuration does not provide api key or secret")
+            message = "channel=%s&event=%s&time=%d" % (self.channel, self.event, request['time'])
+            request['auth'] = {
+                "method": "api_key",
+                "KEY": self.cfg.api_key,
+                "SIGN": hmac.new(self.cfg.api_secret.encode("utf8"), message.encode("utf8"),
+                                 hashlib.sha512).hexdigest()
+            }
+        return json.dumps(request)
+
+
 class WebSocketResponse(object):
 
     def __init__(self, body: str):
@@ -78,7 +107,7 @@ class WebSocketResponse(object):
         msg = json.loads(body)
         self.channel = msg.get('channel')
         if not self.channel:
-            raise ValueError("no channel found from response message")
+            raise ValueError("no channel found from response message: %s" % body)
 
         self.timestamp = msg.get('time')
         self.event = msg.get('event')
@@ -117,10 +146,14 @@ class Connection(object):
     async def _write(self, conn: websockets.WebSocketClientProtocol):
         if self.sending_history:
             for msg in self.sending_history:
+                if isinstance(msg, WebSocketRequest):
+                    msg = str(msg)
                 await conn.send(msg)
         while True:
             msg = await self.sending_queue.get()
             self.sending_history.append(msg)
+            if isinstance(msg, WebSocketRequest):
+                msg = str(msg)
             await conn.send(msg)
 
     async def _read(self, conn: websockets.WebSocketClientProtocol):
@@ -185,27 +218,8 @@ class BaseChannel(abc.ABC):
         self.cfg = self.conn.cfg
         self.conn.register(self.name, callback)
 
-    def _request(self, event, payload):
-        request = {
-            'time': int(time.time()),
-            'channel': self.name,
-            'event': event,
-            'payload': payload,
-        }
-        if self.require_auth:
-            if not (self.cfg.api_key and self.cfg.api_secret):
-                raise ValueError("configuration does not provide api key or secret")
-            message = "channel=%s&event=%s&time=%d" % (self.name, event, request['time'])
-            request['auth'] = {
-                "method": "api_key",
-                "KEY": self.cfg.api_key,
-                "SIGN": hmac.new(self.cfg.api_secret.encode("utf8"), message.encode("utf8"),
-                                 hashlib.sha512).hexdigest()
-            }
-        self.conn.send(json.dumps(request))
-
     def subscribe(self, payload):
-        self._request('subscribe', payload)
+        self.conn.send(WebSocketRequest(self.cfg, self.name, 'subscribe', payload, self.require_auth))
 
     def unsubscribe(self, payload):
-        self._request('unsubscribe', payload)
+        self.conn.send(WebSocketRequest(self.cfg, self.name, 'unsubscribe', payload, self.require_auth))
