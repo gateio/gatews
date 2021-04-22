@@ -6,10 +6,12 @@ import hashlib
 import hmac
 import json
 import logging
+import ssl
 import time
 import typing
 
 import websockets
+from websockets.exceptions import InvalidMessage
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +39,8 @@ class Configuration(object):
                  executor_pool=None,
                  default_callback=None,
                  ping_interval: int = 5,
-                 max_retry: int = 10):
+                 max_retry: int = 10,
+                 verify: bool = True):
         """Initialize running configuration
 
         @param app: Which websocket to connect to, spot or futures, default to spot
@@ -54,6 +57,7 @@ class Configuration(object):
         @param ping_interval: Active ping interval to websocket server, default to 5 seconds
         @param max_retry: Connection retry times on connection to server lost. Reconnect will be given up if
         max_retry reached. No upper limit if negative. Default to 10.
+        @param verify: enable certificate verification, default to True
         """
         self.app = app
         self.api_key = api_key
@@ -69,6 +73,7 @@ class Configuration(object):
         self.default_callback = default_callback
         self.ping_interval = ping_interval
         self.max_retry = max_retry
+        self.verify = verify
 
 
 class WebSocketRequest(object):
@@ -175,14 +180,20 @@ class Connection(object):
         retried = 0
         while not stopped:
             try:
-                conn = await websockets.connect(self.cfg.host)
+                ctx = None
+                if self.cfg.host.startswith('wss://'):
+                    ctx = ssl.create_default_context()
+                    if not self.cfg.verify:
+                        ctx.check_hostname = False
+                        ctx.verify_mode = ssl.CERT_NONE
+                conn = await websockets.connect(self.cfg.host, ssl=ctx)
                 if retried > 0:
                     logger.warning("reconnect succeeded after retrying %d times", retried + 1)
                     retried = 0
             # DNS might be resolved to multiple address, which cause multiple ConnectionRefusedError
             # being combined to one OSError
-            except (ConnectionRefusedError, OSError):
-                logger.warning("failed to connect to server for the %d time, try again later", retried + 1)
+            except (InvalidMessage, ConnectionRefusedError, OSError) as e:
+                logger.warning("failed to connect to server for the %d time, try again later: %s", retried + 1, e)
                 retried += 1
                 if 0 < self.cfg.max_retry < retried:
                     logger.error("max reconnect time %d reached, give it up", self.cfg.max_retry)
@@ -218,8 +229,8 @@ class BaseChannel(abc.ABC):
         self.cfg = self.conn.cfg
         self.conn.register(self.name, callback)
 
-    def subscribe(self, payload):
+    def subscribe(self, payload=None):
         self.conn.send(WebSocketRequest(self.cfg, self.name, 'subscribe', payload, self.require_auth))
 
-    def unsubscribe(self, payload):
+    def unsubscribe(self, payload=None):
         self.conn.send(WebSocketRequest(self.cfg, self.name, 'unsubscribe', payload, self.require_auth))
