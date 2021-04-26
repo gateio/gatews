@@ -11,7 +11,7 @@ import time
 import typing
 
 import websockets
-from websockets.exceptions import InvalidMessage
+from websockets.exceptions import WebSocketException
 
 logger = logging.getLogger(__name__)
 
@@ -192,7 +192,7 @@ class Connection(object):
                     retried = 0
             # DNS might be resolved to multiple address, which cause multiple ConnectionRefusedError
             # being combined to one OSError
-            except (InvalidMessage, ConnectionRefusedError, OSError) as e:
+            except (WebSocketException, ConnectionRefusedError, OSError) as e:
                 logger.warning("failed to connect to server for the %d time, try again later: %s", retried + 1, e)
                 retried += 1
                 if 0 < self.cfg.max_retry < retried:

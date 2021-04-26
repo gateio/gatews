@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
 REQUIRES = [line.strip() for line in open('requirements.txt') if not line.startswith('#')]
-VERSION = '0.2.0'
+VERSION = '0.2.1'
 
 setup(
     name='gate-ws',
