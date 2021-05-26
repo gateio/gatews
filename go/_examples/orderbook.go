@@ -65,14 +65,14 @@ func OrderBookExample(ws *gate.WsService) {
 			})
 		}
 	})
-	ws.SetCallBack(gate.ChannelOrderBookUpdate, callBack)
-	if err := ws.Subscribe(gate.ChannelOrderBookUpdate, []string{"BCH_USDT", "1000ms"}); err != nil {
+	ws.SetCallBack(gate.ChannelSpotOrderBookUpdate, callBack)
+	if err := ws.Subscribe(gate.ChannelSpotOrderBookUpdate, []string{"BCH_USDT", "1000ms"}); err != nil {
 		log.Printf("Subscribe err:%s", err.Error())
 	}
-	if err := ws.Subscribe(gate.ChannelOrderBookUpdate, []string{"BTC_USDT", "1000ms"}); err != nil {
+	if err := ws.Subscribe(gate.ChannelSpotOrderBookUpdate, []string{"BTC_USDT", "1000ms"}); err != nil {
 		log.Printf("Subscribe err:%s", err.Error())
 	}
-	if err := ws.Subscribe(gate.ChannelOrderBookUpdate, []string{"ETH_USDT", "1000ms"}); err != nil {
+	if err := ws.Subscribe(gate.ChannelSpotOrderBookUpdate, []string{"ETH_USDT", "1000ms"}); err != nil {
 		log.Printf("Subscribe err:%s", err.Error())
 	}
 }

@@ -12,7 +12,11 @@ func main() {
 	// ctx and logger could be nil, they'll be initialized by default
 	ws, err := gate.NewWsService(nil, nil, gate.NewConnConf("",
 		"YOUR_API_KEY", "YOUR_API_SECRET", 10))
-	// we can also do nothing to get a WsService, all parameters will be initialized by default
+	// RECOMMEND this way to get a ConnConf
+	//ws, err := gate.NewWsService(nil, nil, gate.NewConnConfFromOption(&gate.ConfOptions{
+	//	Key: "YOUR_API_KEY", Secret: "YOUR_API_SECRET", MaxRetryConn: 10,
+	//}))
+	// we can also do nothing to get a WsService, all parameters will be initialized by default and default url is spot
 	// but some channels need key and secret for auth, we can also use set function to set key and secret
 	//ws, err := gate.NewWsService(nil, nil, nil)
 	//ws.SetKey("YOUR_API_KEY")
@@ -39,20 +43,20 @@ func main() {
 		log.Printf("%+v", trade)
 	})
 	// first, we need set callback function
-	ws.SetCallBack(gate.ChannelOrder, callOrder)
-	ws.SetCallBack(gate.ChannelPublicTrade, callTrade)
+	ws.SetCallBack(gate.ChannelSpotOrder, callOrder)
+	ws.SetCallBack(gate.ChannelSpotPublicTrade, callTrade)
 	// second, after set callback function, subscribe to any channel you are interested into
-	if err := ws.Subscribe(gate.ChannelPublicTrade, []string{"BCH_USDT"}); err != nil {
+	if err := ws.Subscribe(gate.ChannelSpotPublicTrade, []string{"BCH_USDT"}); err != nil {
 		log.Printf("Subscribe err:%s", err.Error())
 		return
 	}
-	if err := ws.Subscribe(gate.ChannelOrder, []string{"BCH_USDT"}); err != nil {
+	if err := ws.Subscribe(gate.ChannelSpotOrder, []string{"BCH_USDT"}); err != nil {
 		log.Printf("Subscribe err:%s", err.Error())
 		return
 	}
 
 	// example for maintaining local order book
-	OrderBookExample(ws)
+	//OrderBookExample(ws)
 
 	ch := make(chan bool)
 	defer close(ch)

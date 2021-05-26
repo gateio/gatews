@@ -1,12 +1,13 @@
 package gatews
 
 type SpotBalancesMsg struct {
-	Timestamp string `json:"timestamp"`
-	User      string `json:"user"`
-	Asset     string `json:"currency"`
-	Change    string `json:"change"`
-	Total     string `json:"total"`
-	Available string `json:"available"`
+	Timestamp        string `json:"timestamp"`
+	TimestampInMilli string `json:"timestamp_ms"`
+	User             string `json:"user"`
+	Asset            string `json:"currency"`
+	Change           string `json:"change"`
+	Total            string `json:"total"`
+	Available        string `json:"available"`
 }
 
 type SpotCandleUpdateMsg struct {
@@ -31,27 +32,30 @@ type SpotUpdateDepthMsg struct {
 }
 
 type SpotFundingBalancesMsg struct {
-	Timestamp string `json:"timestamp"`
-	User      string `json:"user"`
-	Asset     string `json:"currency"`
-	Change    string `json:"change"`
-	Freeze    string `json:"freeze"`
-	Lent      string `json:"lent"`
+	Timestamp        string `json:"timestamp"`
+	TimestampInMilli string `json:"timestamp_ms"`
+	User             string `json:"user"`
+	Asset            string `json:"currency"`
+	Change           string `json:"change"`
+	Freeze           string `json:"freeze"`
+	Lent             string `json:"lent"`
 }
 
 type SpotMarginBalancesMsg struct {
-	Timestamp string `json:"timestamp"`
-	User      string `json:"user"`
-	Market    string `json:"currency_pair"`
-	Asset     string `json:"currency"`
-	Change    string `json:"change"`
-	Available string `json:"available"`
-	Freeze    string `json:"freeze"`
-	Borrowed  string `json:"borrowed"`
-	Interest  string `json:"interest"`
+	Timestamp        string `json:"timestamp"`
+	TimestampInMilli string `json:"timestamp_ms"`
+	User             string `json:"user"`
+	Market           string `json:"currency_pair"`
+	Asset            string `json:"currency"`
+	Change           string `json:"change"`
+	Available        string `json:"available"`
+	Freeze           string `json:"freeze"`
+	Borrowed         string `json:"borrowed"`
+	Interest         string `json:"interest"`
 }
 
 type SpotBookTickerMsg struct {
+	TimeInMilli  int64  `json:"t"`
 	LastId       int64  `json:"u"`
 	CurrencyPair string `json:"s"`
 	Bid          string `json:"b"`
@@ -108,7 +112,7 @@ type SpotTradeMsg struct {
 	Price        string `json:"price"`
 }
 
-type SpotOrderMsg struct {
+type OrderMsg struct {
 	// SpotOrderMsg ID
 	Id string `json:"id,omitempty"`
 	// User defined information. If not empty, must follow the rules below:  1. prefixed with `t-` 2. no longer than 28 bytes without `t-` prefix 3. can only include 0-9, A-Z, a-z, underscore(_), hyphen(-) or dot(.)
@@ -157,4 +161,12 @@ type SpotOrderMsg struct {
 	RebatedFee string `json:"rebated_fee,omitempty"`
 	// Rebated fee currency unit
 	RebatedFeeCurrency string `json:"rebated_fee_currency,omitempty"`
+}
+
+type SpotOrderMsg struct {
+	OrderMsg
+	CreateTimeMs string `json:"create_time_ms,omitempty"`
+	UpdateTimeMs string `json:"update_time_ms,omitempty"`
+	User         int64  `json:"user"`
+	Event        string `json:"event"`
 }

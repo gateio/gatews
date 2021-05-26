@@ -49,3 +49,16 @@ type Request struct {
 	Auth    Auth     `json:"auth"`
 	Payload []string `json:"payload"`
 }
+
+type Auth struct {
+	Method string `json:"method"`
+	Key    string `json:"KEY"`
+	Secret string `json:"SIGN"`
+}
+
+type requestHistory struct {
+	Channel string   `json:"channel"`
+	Event   string   `json:"event"`
+	Payload []string `json:"payload"`
+	op      *SubscribeOptions
+}

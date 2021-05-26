@@ -1,6 +1,6 @@
 # Gate.io WebSocket Go SDK
 
-`gatews` provides Gate.io WebSocket V4 Go implementation, including  all channels defined in spot(new) WebSocket.
+`gatews` provides Gate.io WebSocket V4 Go implementation, including all channels defined in spot(new) WebSocket.
 
 Features:
 
@@ -8,11 +8,15 @@ Features:
 2. Reconnect on connection to server lost, and resubscribe on connection recovered
 3. Support connecting to multiple websocket servers
 4. Highly configurable
+
 ## Installation
+
 ```shell
 go get github.com/gateio/gatews/go
 ```
+
 ## Getting started
+
 ```golang
 package main
 
@@ -84,7 +88,11 @@ func main() {
 	}
 }
 ```
+
 ## Example
+
 We provide some demo applications in the [examples](_examples) directory, which can be run directly.
 
+## ChangeLog
 
+[changelog](changelog.md) 

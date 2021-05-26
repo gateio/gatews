@@ -2,9 +2,11 @@ package gatews
 
 import (
 	"context"
+	mapset "github.com/deckarep/golang-set"
 	"github.com/gorilla/websocket"
 	"log"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -14,16 +16,24 @@ type WsService struct {
 	Ctx    context.Context
 	Client *websocket.Conn
 	once   *sync.Once
-	buChs  *sync.Map
+	msgChs *sync.Map // business chan
 	calls  *sync.Map
 	conf   *ConnConf
 }
 
+// ConnConf default URL is spot websocket
 type ConnConf struct {
-	markets      *sync.Map
+	subscribeMsg *sync.Map
+	URL          string
 	Key          string
 	Secret       string
+	MaxRetryConn int
+}
+
+type ConfOptions struct {
 	URL          string
+	Key          string
+	Secret       string
 	MaxRetryConn int
 }
 
@@ -72,7 +82,7 @@ func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsS
 		Ctx:    ctx,
 		Client: conn,
 		calls:  new(sync.Map),
-		buChs:  new(sync.Map),
+		msgChs: new(sync.Map),
 		once:   new(sync.Once),
 	}
 
@@ -81,7 +91,7 @@ func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsS
 
 func getInitConnConf() *ConnConf {
 	return &ConnConf{
-		markets:      new(sync.Map),
+		subscribeMsg: new(sync.Map),
 		MaxRetryConn: MaxRetryConn,
 		Key:          "",
 		Secret:       "",
@@ -97,11 +107,28 @@ func NewConnConf(url, key, secret string, maxRetry int) *ConnConf {
 		maxRetry = MaxRetryConn
 	}
 	return &ConnConf{
-		markets:      new(sync.Map),
+		subscribeMsg: new(sync.Map),
 		MaxRetryConn: maxRetry,
 		Key:          key,
 		Secret:       secret,
 		URL:          url,
+	}
+}
+
+// NewConnConfFromOption conf from options, recommend to use this
+func NewConnConfFromOption(op *ConfOptions) *ConnConf {
+	if op.URL == "" {
+		op.URL = BaseUrl
+	}
+	if op.MaxRetryConn == 0 {
+		op.MaxRetryConn = MaxRetryConn
+	}
+	return &ConnConf{
+		subscribeMsg: new(sync.Map),
+		MaxRetryConn: op.MaxRetryConn,
+		Key:          op.Key,
+		Secret:       op.Secret,
+		URL:          op.URL,
 	}
 }
 
@@ -116,8 +143,7 @@ func (ws *WsService) reconnect() error {
 		c, _, err := websocket.DefaultDialer.Dial(ws.conf.URL, nil)
 		if err != nil {
 			if retry >= ws.conf.MaxRetryConn {
-				log.Printf("max reconnect time %d reached, give it up", ws.conf.MaxRetryConn)
-				ws.Client.Close()
+				ws.Logger.Printf("max reconnect time %d reached, give it up", ws.conf.MaxRetryConn)
 				return err
 			}
 			retry++
@@ -131,9 +157,14 @@ func (ws *WsService) reconnect() error {
 	}
 
 	// resubscribe after reconnect
-	ws.conf.markets.Range(func(key, value interface{}) bool {
-		if err := ws.Subscribe(key.(string), value.([]string)); err != nil {
-			log.Printf("after reconnect, subscribe channel[%s] err:%s", key.(string), err.Error())
+	ws.conf.subscribeMsg.Range(func(key, value interface{}) bool {
+		// key is channel, value is []requestHistory
+		for _, req := range value.([]requestHistory) {
+			if err := ws.baseSubscribe(req.Event, req.Channel, req.Payload, req.op); err != nil {
+				ws.Logger.Printf("after reconnect, subscribe channel[%s] err:%s", key.(string), err.Error())
+			} else {
+				ws.Logger.Printf("reconnect channel[%s] with payload[%v] success", key.(string), req.Payload)
+			}
 		}
 		return true
 	})
@@ -166,10 +197,31 @@ func (ws *WsService) GetMaxRetryConn() int {
 }
 
 func (ws *WsService) GetChannelMarkets(channel string) []string {
-	if v, ok := ws.conf.markets.Load(channel); ok {
-		return v.([]string)
+	var markets []string
+	set := mapset.NewSet()
+	if v, ok := ws.conf.subscribeMsg.Load(channel); ok {
+		for _, req := range v.([]requestHistory) {
+			if req.Event == Subscribe {
+				for _, pl := range req.Payload {
+					if strings.Contains(pl, "_") {
+						set.Add(pl)
+					}
+				}
+			} else {
+				for _, pl := range req.Payload {
+					if strings.Contains(pl, "_") {
+						set.Remove(pl)
+					}
+				}
+			}
+		}
+
+		for _, v := range set.ToSlice() {
+			markets = append(markets, v.(string))
+		}
+		return markets
 	}
-	return nil
+	return markets
 }
 
 func (ws *WsService) GetChannels() []string {
