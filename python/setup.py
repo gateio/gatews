@@ -1,14 +1,13 @@
 from setuptools import find_packages, setup
 
-REQUIRES = [line.strip() for line in open('requirements.txt') if not line.startswith('#')]
-VERSION = '0.2.0'
+VERSION = '0.2.2'
 
 setup(
     name='gate-ws',
     version=VERSION,
     packages=find_packages(),
     url='https://github.com/gateio/gatews',
-    install_requires=REQUIRES,
+    install_requires=['websockets>=8.1'],
     license='MIT License',
     author='gateio',
     keywords=["Gate WebSocket V4"],
