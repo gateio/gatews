@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.5
+
+2020-06-02
+
+- add `SpotUpdateAllDepthMsg` struct for parse all order book msg
+
 ## v0.1.4
 
 2020-06-02

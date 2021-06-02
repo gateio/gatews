@@ -20,6 +20,7 @@ type SpotCandleUpdateMsg struct {
 	Name   string `json:"n"`
 }
 
+// SpotUpdateDepthMsg update order book
 type SpotUpdateDepthMsg struct {
 	TimeInMilli  int64      `json:"t"`
 	Event        string     `json:"e"`
@@ -29,6 +30,15 @@ type SpotUpdateDepthMsg struct {
 	LastId       int64      `json:"u"`
 	Bid          [][]string `json:"b"`
 	Ask          [][]string `json:"a"`
+}
+
+// SpotUpdateAllDepthMsg all order book
+type SpotUpdateAllDepthMsg struct {
+	TimeInMilli  int64       `json:"t"`
+	LastUpdateId int64       `json:"lastUpdateId"`
+	CurrencyPair string      `json:"s"`
+	Bid          [][2]string `json:"bids"`
+	Ask          [][2]string `json:"asks"`
 }
 
 type SpotFundingBalancesMsg struct {
