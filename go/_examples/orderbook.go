@@ -84,6 +84,10 @@ func updateLocalOrderBook(msg gate.SpotUpdateDepthMsg) error {
 	if orderBook, ok := localOrderBook.Load(msg.CurrencyPair); ok {
 		if orderBook.(*OrderBook).ID+1 >= msg.FirstId && orderBook.(*OrderBook).ID+1 <= msg.LastId {
 			if err := updateOrderBook(orderBook.(*OrderBook), msg); err != nil {
+				localOrderBook.Delete(msg.CurrencyPair)
+				if err := reGetBaseDepth(msg.CurrencyPair); err != nil {
+					return err
+				}
 				return err
 			}
 		} else if msg.LastId < orderBook.(*OrderBook).ID+1 {
@@ -92,21 +96,25 @@ func updateLocalOrderBook(msg gate.SpotUpdateDepthMsg) error {
 			localOrderBook.Delete(msg.CurrencyPair)
 			log.Printf(">>>>>>>>>>>>>>>>%s depth is fall behind, f:%d, l:%d", msg.CurrencyPair, msg.FirstId, msg.LastId)
 			log.Printf("reinit %s depth", msg.CurrencyPair)
-			depth, err := getBaseDepth(msg.CurrencyPair, MaxLimit)
-			if err != nil {
+			if err := reGetBaseDepth(msg.CurrencyPair); err != nil {
 				return err
 			}
-			localOrderBook.Store(msg.CurrencyPair, depth)
 		}
 	} else {
 		log.Printf("init %s depth", msg.CurrencyPair)
-
-		depth, err := getBaseDepth(msg.CurrencyPair, MaxLimit)
-		if err != nil {
+		if err := reGetBaseDepth(msg.CurrencyPair); err != nil {
 			return err
 		}
-		localOrderBook.Store(msg.CurrencyPair, depth)
 	}
+	return nil
+}
+
+func reGetBaseDepth(market string) error {
+	depth, err := getBaseDepth(market, MaxLimit)
+	if err != nil {
+		return err
+	}
+	localOrderBook.Store(market, depth)
 	return nil
 }
 
@@ -179,11 +187,22 @@ func updateOrderBook(orderBook *OrderBook, update gate.SpotUpdateDepthMsg) error
 				return err
 			}
 			if ask[1] == "0" {
-				orderBook.Asks.Delete(askEntry)
+				for e := orderBook.Asks.Front(); e != nil; e = e.Next() {
+					if e.Value.(*OrderBookEntry).Price.String() == ask[0] {
+						orderBook.Asks.Delete(e.Value)
+						break
+					}
+				}
 			} else {
-				if ele := orderBook.Asks.Find(askEntry); ele != nil {
-					ele.Value.(*OrderBookEntry).Size = ask[1]
-				} else {
+				found := false
+				for e := orderBook.Asks.Front(); e != nil; e = e.Next() {
+					if e.Value.(*OrderBookEntry).Price.String() == ask[0] {
+						e.Value.(*OrderBookEntry).Size = ask[1]
+						found = true
+						break
+					}
+				}
+				if !found  {
 					orderBook.Asks.Insert(askEntry)
 				}
 			}
@@ -198,12 +217,23 @@ func updateOrderBook(orderBook *OrderBook, update gate.SpotUpdateDepthMsg) error
 				return err
 			}
 			if bid[1] == "0" {
-				orderBook.Bids.Delete(bidEntry)
+				for e := orderBook.Bids.Back(); e != nil; e = e.Prev() {
+					if e.Value.(*OrderBookEntry).Price.String() == bid[0] {
+						orderBook.Bids.Delete(e.Value)
+						break
+					}
+				}
 			} else {
-				if ele := orderBook.Bids.Find(bidEntry); ele != nil {
-					ele.Value.(*OrderBookEntry).Size = bid[1]
-				} else {
-					orderBook.Bids.Insert(bidEntry)
+				found := false
+				for e := orderBook.Bids.Back(); e != nil; e = e.Prev() {
+					if e.Value.(*OrderBookEntry).Price.String() == bid[0] {
+						e.Value.(*OrderBookEntry).Size = bid[1]
+						found = true
+						break
+					}
+				}
+				if !found  {
+					orderBook.Asks.Insert(bidEntry)
 				}
 			}
 		}
