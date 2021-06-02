@@ -48,19 +48,22 @@ func OrderBookExample(ws *gate.WsService) {
 		if err := json.Unmarshal(msg.Result, &depthMsg); err != nil {
 			log.Printf("order Unmarshal err:%s", err.Error())
 		}
-		log.Printf("f:%d, l:%d", depthMsg.FirstId, depthMsg.LastId)
 		if err := updateLocalOrderBook(depthMsg); err != nil {
 			log.Printf("err:%s", err.Error())
 		} else {
 			localOrderBook.Range(func(key, value interface{}) bool {
+				log.Printf("------>%s order book here\n", key.(string))
+				// ask print from min to max
 				for e := value.(*OrderBook).Asks.Front(); e != nil; e = e.Next() {
-					fmt.Println(e.Value.(*OrderBookEntry).Price, "-->", e.Value.(*OrderBookEntry).Size)
+					log.Println("ask: ",e.Value.(*OrderBookEntry).Price, "-->", e.Value.(*OrderBookEntry).Size)
 				}
-				fmt.Println("<><><><><><><><>")
-				for e := value.(*OrderBook).Bids.Front(); e != nil; e = e.Next() {
-					fmt.Println(e.Value.(*OrderBookEntry).Price, "-->", e.Value.(*OrderBookEntry).Size)
+
+				log.Println("----------------------------------------------")
+
+				// bid print from max to min
+				for e := value.(*OrderBook).Bids.Back(); e != nil; e = e.Prev() {
+					log.Println("bid: ",e.Value.(*OrderBookEntry).Price, "-->", e.Value.(*OrderBookEntry).Size)
 				}
-				fmt.Printf("%s >>> %+v\n", key.(string), value.(*OrderBook))
 				return true
 			})
 		}
@@ -78,19 +81,22 @@ func OrderBookExample(ws *gate.WsService) {
 }
 
 func updateLocalOrderBook(msg gate.SpotUpdateDepthMsg) error {
-	if orderbook, ok := localOrderBook.Load(msg.CurrencyPair); ok {
-		log.Printf("----------now id %d", orderbook.(*OrderBook).ID)
-
-		if orderbook.(*OrderBook).ID+1 >= msg.FirstId && orderbook.(*OrderBook).ID+1 <= msg.LastId {
-			if err := updateOrderBook(orderbook.(*OrderBook), msg); err != nil {
+	if orderBook, ok := localOrderBook.Load(msg.CurrencyPair); ok {
+		if orderBook.(*OrderBook).ID+1 >= msg.FirstId && orderBook.(*OrderBook).ID+1 <= msg.LastId {
+			if err := updateOrderBook(orderBook.(*OrderBook), msg); err != nil {
 				return err
 			}
-		} else if msg.LastId < orderbook.(*OrderBook).ID+1 {
+		} else if msg.LastId < orderBook.(*OrderBook).ID+1 {
 			return nil
-		} else if orderbook.(*OrderBook).ID+1 < msg.FirstId {
+		} else if orderBook.(*OrderBook).ID+1 < msg.FirstId {
 			localOrderBook.Delete(msg.CurrencyPair)
 			log.Printf(">>>>>>>>>>>>>>>>%s depth is fall behind, f:%d, l:%d", msg.CurrencyPair, msg.FirstId, msg.LastId)
-			return nil
+			log.Printf("reinit %s depth", msg.CurrencyPair)
+			depth, err := getBaseDepth(msg.CurrencyPair, MaxLimit)
+			if err != nil {
+				return err
+			}
+			localOrderBook.Store(msg.CurrencyPair, depth)
 		}
 	} else {
 		log.Printf("init %s depth", msg.CurrencyPair)
@@ -140,7 +146,8 @@ func getBaseDepth(cp string, limit int) (*OrderBook, error) {
 	if asks.Len() > 0 && bids.Len() > 0 {
 		// reject overlapping
 		if asks.Front().Value.(*OrderBookEntry).Price.LessThanOrEqual(bids.Back().Value.(*OrderBookEntry).Price) {
-			return nil, fmt.Errorf("overlapping ask and bid price")
+			return nil, fmt.Errorf("overlapping price ask[%s] and bid[%s]",
+				asks.Front().Value.(*OrderBookEntry).Price.String(), bids.Back().Value.(*OrderBookEntry).Price.String())
 		}
 	}
 
@@ -162,8 +169,8 @@ func fromHttpOrderBook(apiEntry []string) (*OrderBookEntry, error) {
 	return &OrderBookEntry{Price: price, Size: apiEntry[1]}, nil
 }
 
-func updateOrderBook(orderbook *OrderBook, update gate.SpotUpdateDepthMsg) error {
-	orderbook.ID = update.LastId
+func updateOrderBook(orderBook *OrderBook, update gate.SpotUpdateDepthMsg) error {
+	orderBook.ID = update.LastId
 	if len(update.Ask) > 0 {
 		for _, ask := range update.Ask {
 			askEntry, err := fromHttpOrderBook(ask)
@@ -172,16 +179,18 @@ func updateOrderBook(orderbook *OrderBook, update gate.SpotUpdateDepthMsg) error
 				return err
 			}
 			if ask[1] == "0" {
-				orderbook.Asks.Delete(askEntry)
+				orderBook.Asks.Delete(askEntry)
 			} else {
-				if ele := orderbook.Asks.Find(askEntry); ele != nil {
+				if ele := orderBook.Asks.Find(askEntry); ele != nil {
 					ele.Value.(*OrderBookEntry).Size = ask[1]
 				} else {
-					orderbook.Asks.Insert(askEntry)
+					orderBook.Asks.Insert(askEntry)
 				}
 			}
 		}
-	} else if len(update.Bid) > 0 {
+	}
+
+	if len(update.Bid) > 0 {
 		for _, bid := range update.Bid {
 			bidEntry, err := fromHttpOrderBook(bid)
 			if err != nil {
@@ -189,14 +198,23 @@ func updateOrderBook(orderbook *OrderBook, update gate.SpotUpdateDepthMsg) error
 				return err
 			}
 			if bid[1] == "0" {
-				orderbook.Bids.Delete(bidEntry)
+				orderBook.Bids.Delete(bidEntry)
 			} else {
-				if ele := orderbook.Bids.Find(bidEntry); ele != nil {
+				if ele := orderBook.Bids.Find(bidEntry); ele != nil {
 					ele.Value.(*OrderBookEntry).Size = bid[1]
 				} else {
-					orderbook.Bids.Insert(bidEntry)
+					orderBook.Bids.Insert(bidEntry)
 				}
 			}
+		}
+	}
+
+	// judge overlapping
+	if orderBook.Asks.Len() > 0 && orderBook.Bids.Len() > 0 {
+		// reject overlapping
+		if orderBook.Asks.Front().Value.(*OrderBookEntry).Price.LessThanOrEqual(orderBook.Bids.Back().Value.(*OrderBookEntry).Price) {
+			return fmt.Errorf("overlapping price ask[%s] and bid[%s]",
+				orderBook.Asks.Front().Value.(*OrderBookEntry).Price.String(), orderBook.Bids.Back().Value.(*OrderBookEntry).Price.String())
 		}
 	}
 	return nil

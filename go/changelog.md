@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.4
+
+2020-06-02
+
+- fix overlapping price for local order book example
+- update README
+
 ## v0.1.3
 
 2020-05-26
