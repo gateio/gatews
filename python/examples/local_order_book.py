@@ -127,6 +127,11 @@ class OrderBook(object):
                 # price found, update amount
                 book[idx].amount = entry.amount
 
+    def __str__(self):
+        return '\n  id: %d\n  asks:\n%s\n  bids:\n%s' % (self.id,
+                                                         '\n'.join([' ' * 4 + str(a) for a in self.asks]),
+                                                         '\n'.join([' ' * 4 + str(b) for b in self.bids]))
+
     def update(self, ws_update):
         if ws_update['u'] < self.id + 1:
             # ignore older message
@@ -143,6 +148,11 @@ class OrderBook(object):
             entry = OrderBookEntry(*bid)
             self.update_entry(self.bids, entry)
         # update local order book ID
+        # check order book overlapping
+        if len(self.asks) > 0 and len(self.bids) > 0:
+            if self.asks[0].price <= self.bids[0].price:
+                raise ValueError("price overlapping, min ask price %s not greater than max bid price %s" % (
+                    self.asks[0].price, self.bids[0].price))
         self.id = ws_update['u']
 
 
