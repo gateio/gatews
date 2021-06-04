@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.7
+
+2020-06-04
+
+- fix reconnect msg nil `SubscribeOptions` caused reconnect msg lost
+
 ## v0.1.6
 
 2020-06-04

@@ -106,22 +106,23 @@ func (ws *WsService) baseSubscribe(event string, channel string, payload []strin
 		return err
 	}
 
-	if op != nil && !op.IsReConnect {
-		if v, ok := ws.conf.subscribeMsg.Load(channel); ok {
-			reqs := v.([]requestHistory)
-			reqs = append(reqs, requestHistory{
-				Channel: channel,
-				Event:   event,
-				Payload: payload,
-			})
-			ws.conf.subscribeMsg.Store(channel, reqs)
-		} else {
-			ws.conf.subscribeMsg.Store(channel, []requestHistory{{
-				Channel: channel,
-				Event:   event,
-				Payload: payload,
-			}})
+	if v, ok := ws.conf.subscribeMsg.Load(channel); ok {
+		if op != nil && op.IsReConnect {
+			return nil
 		}
+		reqs := v.([]requestHistory)
+		reqs = append(reqs, requestHistory{
+			Channel: channel,
+			Event:   event,
+			Payload: payload,
+		})
+		ws.conf.subscribeMsg.Store(channel, reqs)
+	} else {
+		ws.conf.subscribeMsg.Store(channel, []requestHistory{{
+			Channel: channel,
+			Event:   event,
+			Payload: payload,
+		}})
 	}
 
 	return nil
