@@ -160,6 +160,7 @@ func (ws *WsService) reconnect() error {
 	ws.conf.subscribeMsg.Range(func(key, value interface{}) bool {
 		// key is channel, value is []requestHistory
 		for _, req := range value.([]requestHistory) {
+			req.op.IsReConnect = true
 			if err := ws.baseSubscribe(req.Event, req.Channel, req.Payload, req.op); err != nil {
 				ws.Logger.Printf("after reconnect, subscribe channel[%s] err:%s", key.(string), err.Error())
 			} else {

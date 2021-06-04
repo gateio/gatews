@@ -52,30 +52,30 @@ func OrderBookExample(ws *gate.WsService) {
 			log.Printf("err:%s", err.Error())
 		} else {
 			localOrderBook.Range(func(key, value interface{}) bool {
-				log.Printf("------>%s order book here\n", key.(string))
+				log.Printf("------>%s order book here, ask len = %d, bid len = %d\n", key.(string), value.(*OrderBook).Asks.Len(), value.(*OrderBook).Bids.Len())
 				// ask print from min to max
-				for e := value.(*OrderBook).Asks.Front(); e != nil; e = e.Next() {
-					log.Println("ask: ",e.Value.(*OrderBookEntry).Price, "-->", e.Value.(*OrderBookEntry).Size)
-				}
-
-				log.Println("----------------------------------------------")
-
-				// bid print from max to min
-				for e := value.(*OrderBook).Bids.Back(); e != nil; e = e.Prev() {
-					log.Println("bid: ",e.Value.(*OrderBookEntry).Price, "-->", e.Value.(*OrderBookEntry).Size)
-				}
+				//for e := value.(*OrderBook).Asks.Front(); e != nil; e = e.Next() {
+				//	log.Println("ask: ", e.Value.(*OrderBookEntry).Price, "-->", e.Value.(*OrderBookEntry).Size)
+				//}
+				//
+				//log.Println("----------------------------------------------")
+				//
+				//// bid print from max to min
+				//for e := value.(*OrderBook).Bids.Back(); e != nil; e = e.Prev() {
+				//	log.Println("bid: ", e.Value.(*OrderBookEntry).Price, "-->", e.Value.(*OrderBookEntry).Size)
+				//}
 				return true
 			})
 		}
 	})
-	ws.SetCallBack(gate.ChannelSpotOrderBookUpdate, callBack)
-	if err := ws.Subscribe(gate.ChannelSpotOrderBookUpdate, []string{"BCH_USDT", "1000ms"}); err != nil {
+	ws.SetCallBack(gate.ChannelSpotOrderBook, callBack)
+	if err := ws.Subscribe(gate.ChannelSpotOrderBook, []string{"GT_USDT", "100", "100ms"}); err != nil {
 		log.Printf("Subscribe err:%s", err.Error())
 	}
-	if err := ws.Subscribe(gate.ChannelSpotOrderBookUpdate, []string{"BTC_USDT", "1000ms"}); err != nil {
+	if err := ws.Subscribe(gate.ChannelSpotOrderBook, []string{"BTC_USDT", "100", "100ms"}); err != nil {
 		log.Printf("Subscribe err:%s", err.Error())
 	}
-	if err := ws.Subscribe(gate.ChannelSpotOrderBookUpdate, []string{"ETH_USDT", "1000ms"}); err != nil {
+	if err := ws.Subscribe(gate.ChannelSpotOrderBook, []string{"ETH_USDT", "100", "100ms"}); err != nil {
 		log.Printf("Subscribe err:%s", err.Error())
 	}
 }
@@ -202,7 +202,7 @@ func updateOrderBook(orderBook *OrderBook, update gate.SpotUpdateDepthMsg) error
 						break
 					}
 				}
-				if !found  {
+				if !found {
 					orderBook.Asks.Insert(askEntry)
 				}
 			}
@@ -232,7 +232,7 @@ func updateOrderBook(orderBook *OrderBook, update gate.SpotUpdateDepthMsg) error
 						break
 					}
 				}
-				if !found  {
+				if !found {
 					orderBook.Asks.Insert(bidEntry)
 				}
 			}

@@ -7,12 +7,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"io"
 	"net"
 	"time"
 )
 
 type SubscribeOptions struct {
-	ID int64 `json:"id"`
+	ID          int64 `json:"id"`
+	IsReConnect bool  `json:"-"`
 }
 
 func (ws *WsService) Subscribe(channel string, payload []string) error {
@@ -104,20 +106,22 @@ func (ws *WsService) baseSubscribe(event string, channel string, payload []strin
 		return err
 	}
 
-	if v, ok := ws.conf.subscribeMsg.Load(channel); ok {
-		reqs := v.([]requestHistory)
-		reqs = append(reqs, requestHistory{
-			Channel: channel,
-			Event:   event,
-			Payload: payload,
-		})
-		ws.conf.subscribeMsg.Store(channel, reqs)
-	} else {
-		ws.conf.subscribeMsg.Store(channel, []requestHistory{{
-			Channel: channel,
-			Event:   event,
-			Payload: payload,
-		}})
+	if op != nil && !op.IsReConnect {
+		if v, ok := ws.conf.subscribeMsg.Load(channel); ok {
+			reqs := v.([]requestHistory)
+			reqs = append(reqs, requestHistory{
+				Channel: channel,
+				Event:   event,
+				Payload: payload,
+			})
+			ws.conf.subscribeMsg.Store(channel, reqs)
+		} else {
+			ws.conf.subscribeMsg.Store(channel, []requestHistory{{
+				Channel: channel,
+				Event:   event,
+				Payload: payload,
+			}})
+		}
 	}
 
 	return nil
@@ -140,7 +144,7 @@ func (ws *WsService) readMsg() {
 						ne, hasNetErr := err.(net.Error)
 						noe, hasNetOpErr := err.(*net.OpError)
 						if websocket.IsUnexpectedCloseError(err) || (hasNetErr && ne.Timeout()) || (hasNetOpErr && noe != nil) ||
-							websocket.IsCloseError(err) {
+							websocket.IsCloseError(err) || io.ErrUnexpectedEOF == err {
 							ws.Logger.Printf("websocket err:%s", err.Error())
 							if e := ws.reconnect(); e != nil {
 								ws.Logger.Printf("reconnect err:%s", err.Error())

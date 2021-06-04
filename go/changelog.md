@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.6
+
+2020-06-04
+
+- add `io.ErrUnexpectedEOF` error capture, it caused v0.1.5 can't reconnect
+- fix reconnect msg repeat add
+
 ## v0.1.5
 
 2020-06-02
