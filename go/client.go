@@ -239,3 +239,7 @@ func (ws *WsService) GetChannels() []string {
 	})
 	return channels
 }
+
+func (ws *WsService) GetConnection() *websocket.Conn {
+	return ws.Client
+}
