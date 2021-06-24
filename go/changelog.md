@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.2.1
+
+2021-06-24
+
+- fix futures book ticker and order book update struct
+
 ## v0.2.0
 
 2021-06-24
