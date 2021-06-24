@@ -95,11 +95,41 @@ type FuturesOrderBookItem struct {
 
 type FuturesOrderBook struct {
 	// Order Book ID. Increase by 1 on every order book change. Set `with_id=true` to include this field in response
-	Id int64 `json:"id,omitempty"`
+	Id       int64  `json:"id,omitempty"`
+	Contract string `json:"contract"`
+	Time     int64  `json:"t"`
 	// Asks order depth
 	Asks []FuturesOrderBookItem `json:"asks"`
 	// Bids order depth
 	Bids []FuturesOrderBookItem `json:"bids"`
+}
+
+type FuturesOrderBookAll struct {
+	Contract string `json:"c"`
+	Price    string `json:"p"`
+	Id       int64  `json:"id"`
+	Size     int64  `json:"s"`
+}
+
+type FuturesOrderBookUpdate struct {
+	TimeMillis   int64  `json:"t"`
+	UpdateId     int64  `json:"u"`
+	Contract     string `json:"s"`
+	BestBidPrice string `json:"b"`
+	BestBidSize  string `json:"B"`
+	BestAskPrice string `json:"a"`
+	BestAskSize  string `json:"A"`
+}
+
+type FuturesBookTicker struct {
+	TimeMillis int64  `json:"t"`
+	Contract   string `json:"s"`
+	FirstId    int64  `json:"U"`
+	LastId     int64  `json:"u"`
+	// Asks order depth
+	Asks []FuturesOrderBookItem `json:"a"`
+	// Bids order depth
+	Bids []FuturesOrderBookItem `json:"b"`
 }
 
 type FuturesOrder struct {
@@ -209,6 +239,8 @@ type FuturesCandlestick struct {
 	L string `json:"l,omitempty"`
 	// Open price
 	O string `json:"o,omitempty"`
+	// futures contract name
+	N string `json:"n"`
 }
 
 type FuturesAccountBook struct {
@@ -241,4 +273,17 @@ type FuturesAccount struct {
 	Currency string `json:"currency,omitempty"`
 	// Whether dual mode is enabled
 	InDualMode bool `json:"in_dual_mode,omitempty"`
+}
+
+type FuturesUserTrade struct {
+	Contract string `json:"contract"`
+	// Trading time
+	CreateTime float64 `json:"create_time,omitempty"`
+	// Trading time, with milliseconds set to 3 decimal places.
+	CreateTimeMs float64 `json:"create_time_ms,omitempty"`
+	Id           string  `json:"id"`
+	OrderId      string  `json:"order_id"`
+	Price        string  `json:"price"`
+	Size         int64   `json:"size"`
+	Role         string  `json:"role"`
 }
