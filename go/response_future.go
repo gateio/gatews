@@ -113,7 +113,8 @@ type FuturesOrderBookAll struct {
 
 type FuturesOrderBookUpdate struct {
 	TimeMillis   int64  `json:"t"`
-	UpdateId     int64  `json:"u"`
+	FirstId      int64  `json:"U"`
+	LastId       int64  `json:"u"`
 	Contract     string `json:"s"`
 	BestBidPrice string `json:"b"`
 	BestBidSize  string `json:"B"`

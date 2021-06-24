@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.2.0
+
+2021-06-24
+
+- fix futures order book update struct
+
+## v0.1.9
+
+2021-06-24
+
+- add futures order book struct
+
 ## v0.1.8
 
 2021-06-22
