@@ -22,6 +22,7 @@ const (
 	ChannelSpotPublicTrade     = "spot.trades"
 	ChannelSpotFundingBalance  = "spot.funding_balances"
 	ChannelSpotMarginBalance   = "spot.margin_balances"
+	ChannelSpotCrossBalance    = "spot.cross_balances"
 )
 
 // future channels

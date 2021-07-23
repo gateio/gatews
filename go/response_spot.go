@@ -110,6 +110,7 @@ type SpotUserTradesMsg struct {
 	FeeCurrency  string `json:"fee_currency"`
 	PointFee     string `json:"point_fee"`
 	GtFee        string `json:"gt_fee"`
+	Text         string `json:"text"`
 }
 
 type SpotTradeMsg struct {

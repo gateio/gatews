@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.2
+
+2021-07-23
+
+- Add constant `ChannelSpotCrossBalance` support `spot.cross_balances` channel
+- SpotUserTradesMsg add field `Text` for orders' text
+
 ## v0.2.1
 
 2021-06-24

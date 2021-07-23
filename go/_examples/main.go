@@ -2,9 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	gate "github.com/gateio/gatews/go"
 	"log"
 	"time"
+
+	gate "github.com/gateio/gatews/go"
 )
 
 func main() {
@@ -56,7 +57,7 @@ func main() {
 	}
 
 	// example for maintaining local order book
-	//OrderBookExample(ws)
+	//LocalOrderBook(context.Background(), ws, []string{"BTC_USDT"})
 
 	ch := make(chan bool)
 	defer close(ch)
