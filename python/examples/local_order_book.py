@@ -212,7 +212,8 @@ class LocalOrderBook(object):
                 result = await self.q.get()
                 try:
                     self.ob.update(result)
-                except ValueError:
+                except ValueError as e:
+                    logger.error("failed to update: %s", e)
                     # reconstruct order book
                     break
 

@@ -51,3 +51,8 @@ class SpotMarginBalanceChannel(BaseChannel):
 class SpotFundingBalanceChannel(BaseChannel):
     name = 'spot.funding_balances'
     require_auth = True
+
+
+class SpotCrossMarginBalanceChannel(BaseChannel):
+    name = 'spot.cross_balances'
+    require_auth = True
