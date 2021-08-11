@@ -3,7 +3,9 @@ package main
 import (
 	"encoding/json"
 	"log"
-	"time"
+	"os"
+	"os/signal"
+	"syscall"
 
 	gate "github.com/gateio/gatews/go"
 )
@@ -11,17 +13,17 @@ import (
 func main() {
 	// create WsService with ConnConf, this is recommended, key and secret will be needed by some channels
 	// ctx and logger could be nil, they'll be initialized by default
-	ws, err := gate.NewWsService(nil, nil, gate.NewConnConf("",
-		"YOUR_API_KEY", "YOUR_API_SECRET", 10))
+	// ws, err := gate.NewWsService(nil, nil, gate.NewConnConf("",
+	// 	"YOUR_API_KEY", "YOUR_API_SECRET", 10))
 	// RECOMMEND this way to get a ConnConf
-	//ws, err := gate.NewWsService(nil, nil, gate.NewConnConfFromOption(&gate.ConfOptions{
-	//	Key: "YOUR_API_KEY", Secret: "YOUR_API_SECRET", MaxRetryConn: 10,
-	//}))
+	ws, err := gate.NewWsService(nil, nil, gate.NewConnConfFromOption(&gate.ConfOptions{
+		Key: "YOUR_API_KEY", Secret: "YOUR_API_SECRET", MaxRetryConn: 10, SkipTlsVerify: false,
+	}))
 	// we can also do nothing to get a WsService, all parameters will be initialized by default and default url is spot
 	// but some channels need key and secret for auth, we can also use set function to set key and secret
-	//ws, err := gate.NewWsService(nil, nil, nil)
-	//ws.SetKey("YOUR_API_KEY")
-	//ws.SetSecret("YOUR_API_SECRET")
+	// ws, err := gate.NewWsService(nil, nil, nil)
+	// ws.SetKey("YOUR_API_KEY")
+	// ws.SetSecret("YOUR_API_SECRET")
 	if err != nil {
 		log.Printf("NewWsService err:%s", err.Error())
 		return
@@ -57,18 +59,10 @@ func main() {
 	}
 
 	// example for maintaining local order book
-	//LocalOrderBook(context.Background(), ws, []string{"BTC_USDT"})
+	// LocalOrderBook(context.Background(), ws, []string{"BTC_USDT"})
 
-	ch := make(chan bool)
-	defer close(ch)
-
-	for {
-		select {
-		case <-ch:
-			log.Printf("manual done")
-		case <-time.After(time.Second * 1000):
-			log.Printf("auto done")
-			return
-		}
-	}
+	ch := make(chan os.Signal)
+	signal.Ignore(syscall.SIGPIPE, syscall.SIGALRM)
+	signal.Notify(ch, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT, syscall.SIGABRT, syscall.SIGKILL)
+	<-ch
 }

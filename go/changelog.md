@@ -1,11 +1,20 @@
 # Changelog
 
+## v0.2.3
+
+2021-08-11
+
+- Support websocket skip tls verify with `SkipTlsVerify` of ConfOptions
+- Update futures models
+- Update examples
+
 ## v0.2.2
 
 2021-07-23
 
 - Add constant `ChannelSpotCrossBalance` support `spot.cross_balances` channel
 - SpotUserTradesMsg add field `Text` for orders' text
+- Update local order book example
 
 ## v0.2.1
 

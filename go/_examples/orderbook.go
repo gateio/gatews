@@ -11,9 +11,10 @@ import (
 	"sync"
 
 	"github.com/gansidui/skiplist"
-	gate "github.com/gateio/gatews/go"
 	"github.com/shopspring/decimal"
 	queue2 "github.com/yireyun/go-queue"
+
+	gate "github.com/gateio/gatews/go"
 )
 
 const (
@@ -99,7 +100,7 @@ func LocalOrderBook(ctx context.Context, ws *gate.WsService, cps []string) {
 }
 
 func updateLocalOrderBook(msg gate.SpotUpdateDepthMsg) error {
-	//log.Printf("updateLocalOrderBook msg:%+v", msg)
+	// log.Printf("updateLocalOrderBook msg:%+v", msg)
 
 	if orderBook, ok := localOrderBook.Load(msg.CurrencyPair); ok {
 		if orderBook.(*OrderBook).ID+1 >= msg.FirstId && orderBook.(*OrderBook).ID+1 <= msg.LastId {

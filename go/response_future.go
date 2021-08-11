@@ -9,16 +9,8 @@ type FuturesTicker struct {
 	ChangePercentage string `json:"change_percentage,omitempty"`
 	// Contract total size
 	TotalSize string `json:"total_size,omitempty"`
-	// Lowest trading price in recent 24h
-	Low24h string `json:"low_24h,omitempty"`
-	// Highest trading price in recent 24h
-	High24h string `json:"high_24h,omitempty"`
 	// Trade size in recent 24h
 	Volume24h string `json:"volume_24h,omitempty"`
-	// Trade volumes in recent 24h in BTC(deprecated, use `volume_24h_base`, `volume_24h_quote`, `volume_24h_settle` instead)
-	Volume24hBtc string `json:"volume_24h_btc,omitempty"`
-	// Trade volumes in recent 24h in USD(deprecated, use `volume_24h_base`, `volume_24h_quote`, `volume_24h_settle` instead)
-	Volume24hUsd string `json:"volume_24h_usd,omitempty"`
 	// Trade volume in recent 24h, in base currency
 	Volume24hBase string `json:"volume_24h_base,omitempty"`
 	// Trade volume in recent 24h, in quote currency
@@ -50,40 +42,6 @@ type FuturesTrade struct {
 	Size int64 `json:"size,omitempty"`
 	// Trading price
 	Price string `json:"price,omitempty"`
-}
-
-type FuturesPriceTriggeredOrder struct {
-	Initial FuturesInitialOrder `json:"initial"`
-	Trigger FuturesPriceTrigger `json:"trigger"`
-	// Auto order ID
-	Id int64 `json:"id,omitempty"`
-	// User ID
-	User int32 `json:"user,omitempty"`
-	// Creation time
-	CreateTime float64 `json:"create_time,omitempty"`
-	// Finished time
-	FinishTime float64 `json:"finish_time,omitempty"`
-	// ID of the newly created order on condition triggered
-	TradeId int64 `json:"trade_id,omitempty"`
-	// Order status.
-	Status string `json:"status,omitempty"`
-	// How order is finished
-	FinishAs string `json:"finish_as,omitempty"`
-	// Extra messages of how order is finished
-	Reason string `json:"reason,omitempty"`
-}
-
-type FuturesPriceTrigger struct {
-	// How the order will be triggered   - `0`: by price, which means order will be triggered on price condition satisfied  - `1`: by price gap, which means order will be triggered on gap of recent two prices of specified `price_type` satisfied.  Only `0` is supported currently
-	StrategyType int32 `json:"strategy_type,omitempty"`
-	// Price type. 0 - latest deal price, 1 - mark price, 2 - index price
-	PriceType int32 `json:"price_type,omitempty"`
-	// Value of price on price triggered, or price gap on price gap triggered
-	Price string `json:"price,omitempty"`
-	// Trigger condition type  - `1`: calculated price based on `strategy_type` and `price_type` >= `price` - `2`: calculated price based on `strategy_type` and `price_type` <= `price`
-	Rule int32 `json:"rule,omitempty"`
-	// How many seconds will the order wait for the condition being triggered. Order will be cancelled on timed out
-	Expiration int32 `json:"expiration,omitempty"`
 }
 
 type FuturesOrderBookItem struct {
@@ -133,6 +91,23 @@ type FuturesOrderBookUpdate struct {
 	Bids []FuturesOrderBookItem `json:"b"`
 }
 
+type FuturesCandlestick struct {
+	// Unix timestamp in seconds
+	T float64 `json:"t,omitempty"`
+	// size volume. Only returned if `contract` is not prefixed
+	V int64 `json:"v,omitempty"`
+	// Close price
+	C string `json:"c,omitempty"`
+	// Highest price
+	H string `json:"h,omitempty"`
+	// Lowest price
+	L string `json:"l,omitempty"`
+	// Open price
+	O string `json:"o,omitempty"`
+	// futures contract name
+	N string `json:"n"`
+}
+
 type FuturesOrder struct {
 	// Futures order ID
 	Id int64 `json:"id,omitempty"`
@@ -180,9 +155,23 @@ type FuturesOrder struct {
 	Refu int32 `json:"refu,omitempty"`
 }
 
+type FuturesUserTrade struct {
+	Contract string `json:"contract"`
+	// Trading time
+	CreateTime float64 `json:"create_time,omitempty"`
+	// Trading time, with milliseconds set to 3 decimal places.
+	CreateTimeMs float64 `json:"create_time_ms,omitempty"`
+	Id           string  `json:"id"`
+	OrderId      string  `json:"order_id"`
+	Price        string  `json:"price"`
+	Size         int64   `json:"size"`
+	Role         string  `json:"role"`
+}
 type FuturesLiquidate struct {
 	// Liquidation time
 	Time int64 `json:"time,omitempty"`
+	// time in milliseconds
+	TimeMs int64 `json:"time_ms"`
 	// Futures contract
 	Contract string `json:"contract,omitempty"`
 	// Position leverage. Not returned in public endpoints.
@@ -205,7 +194,94 @@ type FuturesLiquidate struct {
 	FillPrice string `json:"fill_price,omitempty"`
 	// Liquidation order maker size
 	Left int64 `json:"left,omitempty"`
+	// user id
+	User string `json:"user"`
 }
+
+type FuturesAutoDeleverages struct {
+	EntryPrice   int64  `json:"entry_price"`
+	FillPrice    int64  `json:"fill_price"`
+	PositionSize int64  `json:"position_size"`
+	TradeSize    int64  `json:"trade_size"`
+	Time         int64  `json:"time"`
+	TimeMs       int64  `json:"time_ms"`
+	Contract     string `json:"contract"`
+	User         string `json:"user"`
+}
+
+type FuturesPositionCloses struct {
+	Contract string  `json:"contract"`
+	Pnl      float64 `json:"pnl"`
+	Side     string  `json:"side"`
+	Text     string  `json:"text"`
+	Time     int64   `json:"time"`
+	TimeMs   int64   `json:"time_ms"`
+	User     string  `json:"user"`
+}
+
+type FuturesBalance struct {
+	Balance float64 `json:"balance"`
+	Change  float64 `json:"change"`
+	Text    string  `json:"text"`
+	Time    int64   `json:"time"`
+	TimeMs  int64   `json:"time_ms"`
+	User    string  `json:"user"`
+	Type    string  `json:"type"`
+}
+
+type FuturesReduceRiskLimits struct {
+	CancelOrders    int64   `json:"cancel_orders"`
+	Contract        string  `json:"contract"`
+	LeverageMax     int64   `json:"leverage_max"`
+	LiqPrice        float64 `json:"liq_price"`
+	MaintenanceRate float64 `json:"maintenance_rate"`
+	RiskLimit       int64   `json:"risk_limit"`
+	Time            int64   `json:"time"`
+	TimeMs          int64   `json:"time_ms"`
+	User            string  `json:"user"`
+}
+
+type FuturesAutoOrder struct {
+	Initial     FuturesInitialOrder `json:"initial"`
+	Trigger     FuturesPriceTrigger `json:"trigger"`
+	StopTrigger FutureStopTrigger   `json:"stop_trigger"`
+	// Auto order ID
+	Id int64 `json:"id,omitempty"`
+	// User ID
+	User int32 `json:"user,omitempty"`
+	// Creation time
+	CreateTime float64 `json:"create_time,omitempty"`
+	// Finished time
+	FinishTime float64 `json:"finish_time,omitempty"`
+	// ID of the newly created order on condition triggered
+	TradeId int64 `json:"trade_id,omitempty"`
+	// Order status.
+	Status string `json:"status,omitempty"`
+	// Extra messages of how order is finished
+	Reason      string `json:"reason,omitempty"`
+	Name        string `json:"name"`
+	IsStopOrder bool   `json:"is_stop_order"`
+}
+
+type FutureStopTrigger struct {
+	Rule         int32  `json:"rule"`
+	TriggerPrice string `json:"trigger_price"`
+	OrderPrice   string `json:"order_price"`
+}
+
+type FuturesPriceTrigger struct {
+	// How the order will be triggered   - `0`: by price, which means order will be triggered on price condition satisfied  - `1`: by price gap, which means order will be triggered on gap of recent two prices of specified `price_type` satisfied.  Only `0` is supported currently
+	StrategyType int32 `json:"strategy_type,omitempty"`
+	// Price type. 0 - latest deal price, 1 - mark price, 2 - index price
+	PriceType int32 `json:"price_type,omitempty"`
+	// Value of price on price triggered, or price gap on price gap triggered
+	Price string `json:"price,omitempty"`
+	// Trigger condition type  - `1`: calculated price based on `strategy_type` and `price_type` >= `price` - `2`: calculated price based on `strategy_type` and `price_type` <= `price`
+	Rule int32 `json:"rule,omitempty"`
+	// How many seconds will the order wait for the condition being triggered. Order will be cancelled on timed out
+	Expiration int32 `json:"expiration,omitempty"`
+}
+
 type FuturesInitialOrder struct {
 	// Futures contract
 	Contract string `json:"contract"`
@@ -213,78 +289,13 @@ type FuturesInitialOrder struct {
 	Size int64 `json:"size,omitempty"`
 	// Order price. Set to 0 to use market price
 	Price string `json:"price"`
-	// Set to true if trying to close the position
-	Close bool `json:"close,omitempty"`
 	// Time in force. If using market price, only `ioc` is supported.  - gtc: GoodTillCancelled - ioc: ImmediateOrCancelled
 	Tif string `json:"tif,omitempty"`
 	// How the order is created. Possible values are: web, api and app
-	Text string `json:"text,omitempty"`
-	// Set to true to create an reduce-only order
-	ReduceOnly bool `json:"reduce_only,omitempty"`
+	Text    string `json:"text,omitempty"`
+	Iceberg int64  `json:"iceberg"`
 	// Is the order reduce-only
 	IsReduceOnly bool `json:"is_reduce_only,omitempty"`
 	// Is the order to close position
 	IsClose bool `json:"is_close,omitempty"`
-}
-
-type FuturesCandlestick struct {
-	// Unix timestamp in seconds
-	T float64 `json:"t,omitempty"`
-	// size volume. Only returned if `contract` is not prefixed
-	V int64 `json:"v,omitempty"`
-	// Close price
-	C string `json:"c,omitempty"`
-	// Highest price
-	H string `json:"h,omitempty"`
-	// Lowest price
-	L string `json:"l,omitempty"`
-	// Open price
-	O string `json:"o,omitempty"`
-	// futures contract name
-	N string `json:"n"`
-}
-
-type FuturesAccountBook struct {
-	// Change time
-	Time float64 `json:"time,omitempty"`
-	// Change amount
-	Change string `json:"change,omitempty"`
-	// Balance after change
-	Balance string `json:"balance,omitempty"`
-	// Changing Type: - dnw: Deposit & Withdraw - pnl: Profit & Loss by reducing position - fee: Trading fee - refr: Referrer rebate - fund: Funding - point_dnw: POINT Deposit & Withdraw - point_fee: POINT Trading fee - point_refr: POINT Referrer rebate
-	Type string `json:"type,omitempty"`
-	// Comment
-	Text string `json:"text,omitempty"`
-}
-
-type FuturesAccount struct {
-	// Total assets, total = position_margin + order_margin + available
-	Total string `json:"total,omitempty"`
-	// Unrealized PNL
-	UnrealisedPnl string `json:"unrealised_pnl,omitempty"`
-	// Position margin
-	PositionMargin string `json:"position_margin,omitempty"`
-	// Order margin of unfinished orders
-	OrderMargin string `json:"order_margin,omitempty"`
-	// Available balance to transfer out or trade
-	Available string `json:"available,omitempty"`
-	// POINT amount
-	Point string `json:"point,omitempty"`
-	// Settle currency
-	Currency string `json:"currency,omitempty"`
-	// Whether dual mode is enabled
-	InDualMode bool `json:"in_dual_mode,omitempty"`
-}
-
-type FuturesUserTrade struct {
-	Contract string `json:"contract"`
-	// Trading time
-	CreateTime float64 `json:"create_time,omitempty"`
-	// Trading time, with milliseconds set to 3 decimal places.
-	CreateTimeMs float64 `json:"create_time_ms,omitempty"`
-	Id           string  `json:"id"`
-	OrderId      string  `json:"order_id"`
-	Price        string  `json:"price"`
-	Size         int64   `json:"size"`
-	Role         string  `json:"role"`
 }

@@ -2,9 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	gate "github.com/gateio/gatews/go"
 	"log"
 	"time"
+
+	gate "github.com/gateio/gatews/go"
 )
 
 func main2() {

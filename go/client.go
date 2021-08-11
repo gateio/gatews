@@ -2,13 +2,15 @@ package gatews
 
 import (
 	"context"
-	mapset "github.com/deckarep/golang-set"
-	"github.com/gorilla/websocket"
+	"crypto/tls"
 	"log"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	mapset "github.com/deckarep/golang-set"
+	"github.com/gorilla/websocket"
 )
 
 type WsService struct {
@@ -23,18 +25,20 @@ type WsService struct {
 
 // ConnConf default URL is spot websocket
 type ConnConf struct {
-	subscribeMsg *sync.Map
-	URL          string
-	Key          string
-	Secret       string
-	MaxRetryConn int
+	subscribeMsg  *sync.Map
+	URL           string
+	Key           string
+	Secret        string
+	MaxRetryConn  int
+	SkipTlsVerify bool
 }
 
 type ConfOptions struct {
-	URL          string
-	Key          string
-	Secret       string
-	MaxRetryConn int
+	URL           string
+	Key           string
+	Secret        string
+	MaxRetryConn  int
+	SkipTlsVerify bool
 }
 
 func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsService, error) {
@@ -56,7 +60,11 @@ func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsS
 	retry := 0
 	var conn *websocket.Conn
 	for !stop {
-		c, _, err := websocket.DefaultDialer.Dial(cfg.URL, nil)
+		dialer := websocket.DefaultDialer
+		if cfg.SkipTlsVerify {
+			dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		}
+		c, _, err := dialer.Dial(cfg.URL, nil)
 		if err != nil {
 			if retry >= cfg.MaxRetryConn {
 				log.Printf("max reconnect time %d reached, give it up", cfg.MaxRetryConn)
@@ -91,11 +99,12 @@ func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsS
 
 func getInitConnConf() *ConnConf {
 	return &ConnConf{
-		subscribeMsg: new(sync.Map),
-		MaxRetryConn: MaxRetryConn,
-		Key:          "",
-		Secret:       "",
-		URL:          BaseUrl,
+		subscribeMsg:  new(sync.Map),
+		MaxRetryConn:  MaxRetryConn,
+		Key:           "",
+		Secret:        "",
+		URL:           BaseUrl,
+		SkipTlsVerify: false,
 	}
 }
 
@@ -115,7 +124,7 @@ func NewConnConf(url, key, secret string, maxRetry int) *ConnConf {
 	}
 }
 
-// NewConnConfFromOption conf from options, recommend to use this
+// NewConnConfFromOption conf from options, recommend using this
 func NewConnConfFromOption(op *ConfOptions) *ConnConf {
 	if op.URL == "" {
 		op.URL = BaseUrl
