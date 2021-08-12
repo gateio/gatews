@@ -17,6 +17,8 @@ type FuturesTicker struct {
 	Volume24hQuote string `json:"volume_24h_quote,omitempty"`
 	// Trade volume in recent 24h, in settle currency
 	Volume24hSettle string `json:"volume_24h_settle,omitempty"`
+	Volume24Usd     string `json:"volume_24_usd"`
+	Volume24Btc     string `json:"volume_24_btc"`
 	// Recent mark price
 	MarkPrice string `json:"mark_price,omitempty"`
 	// Funding rate
@@ -33,9 +35,9 @@ type FuturesTrade struct {
 	// Trade ID
 	Id int64 `json:"id,omitempty"`
 	// Trading time
-	CreateTime float64 `json:"create_time,omitempty"`
+	CreateTime int64 `json:"create_time,omitempty"`
 	// Trading time, with milliseconds set to 3 decimal places.
-	CreateTimeMs float64 `json:"create_time_ms,omitempty"`
+	CreateTimeMs int64 `json:"create_time_ms,omitempty"`
 	// Futures contract
 	Contract string `json:"contract,omitempty"`
 	// Trading size
@@ -72,12 +74,11 @@ type FuturesOrderBookAll struct {
 type FuturesBookTicker struct {
 	TimeMillis   int64  `json:"t"`
 	Contract     string `json:"s"`
-	FirstId      int64  `json:"U"`
-	LastId       int64  `json:"u"`
+	UpdateId     int64  `json:"u"`
 	BestBidPrice string `json:"b"`
-	BestBidSize  string `json:"B"`
+	BestBidSize  int64  `json:"B"`
 	BestAskPrice string `json:"a"`
-	BestAskSize  string `json:"A"`
+	BestAskSize  int64  `json:"A"`
 }
 
 type FuturesOrderBookUpdate struct {
@@ -93,7 +94,7 @@ type FuturesOrderBookUpdate struct {
 
 type FuturesCandlestick struct {
 	// Unix timestamp in seconds
-	T float64 `json:"t,omitempty"`
+	T int64 `json:"t,omitempty"`
 	// size volume. Only returned if `contract` is not prefixed
 	V int64 `json:"v,omitempty"`
 	// Close price
@@ -112,11 +113,13 @@ type FuturesOrder struct {
 	// Futures order ID
 	Id int64 `json:"id,omitempty"`
 	// User ID
-	User int32 `json:"user,omitempty"`
+	User string `json:"user,omitempty"`
 	// Order creation time
-	CreateTime float64 `json:"create_time,omitempty"`
+	CreateTime   int64 `json:"create_time,omitempty"`
+	CreateTimeMs int64 `json:"create_time_ms,omitempty"`
 	// Order finished time. Not returned if order is open
-	FinishTime float64 `json:"finish_time,omitempty"`
+	FinishTime   int64 `json:"finish_time,omitempty"`
+	FinishTimeMs int64 `json:"finish_time_ms,omitempty"`
 	// How the order is finished.  - filled: all filled - cancelled: manually cancelled - liquidated: cancelled because of liquidation - ioc: time in force is `IOC`, finish immediately - auto_deleveraged: finished by ADL - reduce_only: cancelled because of increasing position while `reduce-only` set
 	FinishAs string `json:"finish_as,omitempty"`
 	// Order status  - `open`: waiting to be traded - `finished`: finished
@@ -128,13 +131,9 @@ type FuturesOrder struct {
 	// Display size for iceberg order. 0 for non-iceberg. Note that you would pay the taker fee for the hidden size
 	Iceberg int64 `json:"iceberg,omitempty"`
 	// Order price. 0 for market order with `tif` set as `ioc`
-	Price string `json:"price,omitempty"`
-	// Set as `true` to close the position, with `size` set to 0
-	Close bool `json:"close,omitempty"`
+	Price float64 `json:"price,omitempty"`
 	// Is the order to close position
 	IsClose bool `json:"is_close,omitempty"`
-	// Set as `true` to be reduce-only order
-	ReduceOnly bool `json:"reduce_only,omitempty"`
 	// Is the order reduce-only
 	IsReduceOnly bool `json:"is_reduce_only,omitempty"`
 	// Is the order for liquidation
@@ -144,28 +143,29 @@ type FuturesOrder struct {
 	// Size left to be traded
 	Left int64 `json:"left,omitempty"`
 	// Fill price of the order
-	FillPrice string `json:"fill_price,omitempty"`
+	FillPrice float64 `json:"fill_price,omitempty"`
 	// User defined information. If not empty, must follow the rules below:  1. prefixed with `t-` 2. no longer than 28 bytes without `t-` prefix 3. can only include 0-9, A-Z, a-z, underscore(_), hyphen(-) or dot(.) Besides user defined information, reserved contents are listed below, denoting how the order is created:  - web: from web - api: from API - app: from mobile phones - auto_deleveraging: from ADL - liquidation: from liquidation - insurance: from insurance
 	Text string `json:"text,omitempty"`
 	// Taker fee
-	Tkfr string `json:"tkfr,omitempty"`
+	Tkfr float64 `json:"tkfr,omitempty"`
 	// Maker fee
-	Mkfr string `json:"mkfr,omitempty"`
+	Mkfr int64 `json:"mkfr,omitempty"`
 	// Reference user ID
-	Refu int32 `json:"refu,omitempty"`
+	Refu int32   `json:"refu,omitempty"`
+	Refr float64 `json:"refr"`
 }
 
 type FuturesUserTrade struct {
 	Contract string `json:"contract"`
 	// Trading time
-	CreateTime float64 `json:"create_time,omitempty"`
+	CreateTime int64 `json:"create_time,omitempty"`
 	// Trading time, with milliseconds set to 3 decimal places.
-	CreateTimeMs float64 `json:"create_time_ms,omitempty"`
-	Id           string  `json:"id"`
-	OrderId      string  `json:"order_id"`
-	Price        string  `json:"price"`
-	Size         int64   `json:"size"`
-	Role         string  `json:"role"`
+	CreateTimeMs int64  `json:"create_time_ms,omitempty"`
+	Id           string `json:"id"`
+	OrderId      string `json:"order_id"`
+	Price        string `json:"price"`
+	Size         int64  `json:"size"`
+	Role         string `json:"role"`
 }
 type FuturesLiquidate struct {
 	// Liquidation time
@@ -175,23 +175,23 @@ type FuturesLiquidate struct {
 	// Futures contract
 	Contract string `json:"contract,omitempty"`
 	// Position leverage. Not returned in public endpoints.
-	Leverage string `json:"leverage,omitempty"`
+	Leverage float64 `json:"leverage,omitempty"`
 	// Position size
 	Size int64 `json:"size,omitempty"`
 	// Position margin. Not returned in public endpoints.
-	Margin string `json:"margin,omitempty"`
+	Margin float64 `json:"margin,omitempty"`
 	// Average entry price. Not returned in public endpoints.
-	EntryPrice string `json:"entry_price,omitempty"`
+	EntryPrice float64 `json:"entry_price,omitempty"`
 	// Liquidation price. Not returned in public endpoints.
-	LiqPrice string `json:"liq_price,omitempty"`
+	LiqPrice float64 `json:"liq_price,omitempty"`
 	// Mark price. Not returned in public endpoints.
-	MarkPrice string `json:"mark_price,omitempty"`
+	MarkPrice float64 `json:"mark_price,omitempty"`
 	// Liquidation order ID. Not returned in public endpoints.
 	OrderId int64 `json:"order_id,omitempty"`
 	// Liquidation order price
-	OrderPrice string `json:"order_price,omitempty"`
+	OrderPrice float64 `json:"order_price,omitempty"`
 	// Liquidation order average taker price
-	FillPrice string `json:"fill_price,omitempty"`
+	FillPrice float64 `json:"fill_price,omitempty"`
 	// Liquidation order maker size
 	Left int64 `json:"left,omitempty"`
 	// user id
@@ -199,14 +199,14 @@ type FuturesLiquidate struct {
 }
 
 type FuturesAutoDeleverages struct {
-	EntryPrice   int64  `json:"entry_price"`
-	FillPrice    int64  `json:"fill_price"`
-	PositionSize int64  `json:"position_size"`
-	TradeSize    int64  `json:"trade_size"`
-	Time         int64  `json:"time"`
-	TimeMs       int64  `json:"time_ms"`
-	Contract     string `json:"contract"`
-	User         string `json:"user"`
+	EntryPrice   float64 `json:"entry_price"`
+	FillPrice    float64 `json:"fill_price"`
+	PositionSize int64   `json:"position_size"`
+	TradeSize    int64   `json:"trade_size"`
+	Time         int64   `json:"time"`
+	TimeMs       int64   `json:"time_ms"`
+	Contract     string  `json:"contract"`
+	User         string  `json:"user"`
 }
 
 type FuturesPositionCloses struct {
@@ -241,6 +241,28 @@ type FuturesReduceRiskLimits struct {
 	User            string  `json:"user"`
 }
 
+type FuturesPositions struct {
+	Contract           string  `json:"contract"`
+	CrossLeverageLimit int64   `json:"cross_leverage_limit"`
+	EntryPrice         float64 `json:"entry_price"`
+	HistoryPnl         float64 `json:"history_pnl"`
+	HistoryPoint       float64 `json:"history_point"`
+	LastClosePnl       float64 `json:"last_close_pnl"`
+	Leverage           int64   `json:"leverage"`
+	LeverageMax        int64   `json:"leverage_max"`
+	LiqPrice           float64 `json:"liq_price"`
+	MaintenanceRate    float64 `json:"maintenance_rate"`
+	Margin             float64 `json:"margin"`
+	Mode               string  `json:"mode"`
+	RealisedPnl        float64 `json:"realised_pnl"`
+	RealisedPoint      float64 `json:"realised_point"`
+	RiskLimit          int64   `json:"risk_limit"`
+	Size               int64   `json:"size"`
+	Time               int64   `json:"time"`
+	TimeMs             int64   `json:"time_ms"`
+	User               string  `json:"user"`
+}
+
 type FuturesAutoOrder struct {
 	Initial     FuturesInitialOrder `json:"initial"`
 	Trigger     FuturesPriceTrigger `json:"trigger"`
@@ -248,11 +270,11 @@ type FuturesAutoOrder struct {
 	// Auto order ID
 	Id int64 `json:"id,omitempty"`
 	// User ID
-	User int32 `json:"user,omitempty"`
+	User int64 `json:"user,omitempty"`
 	// Creation time
-	CreateTime float64 `json:"create_time,omitempty"`
+	CreateTime int64 `json:"create_time,omitempty"`
 	// Finished time
-	FinishTime float64 `json:"finish_time,omitempty"`
+	FinishTime int64 `json:"finish_time,omitempty"`
 	// ID of the newly created order on condition triggered
 	TradeId int64 `json:"trade_id,omitempty"`
 	// Order status.

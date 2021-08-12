@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.4
+
+2021-08-12
+
+- update futures models, fix fields wrong type
+- add futures model `FuturesPositions`
+
 ## v0.2.3
 
 2021-08-11
