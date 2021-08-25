@@ -149,7 +149,7 @@ type FuturesOrder struct {
 	// Taker fee
 	Tkfr float64 `json:"tkfr,omitempty"`
 	// Maker fee
-	Mkfr int64 `json:"mkfr,omitempty"`
+	Mkfr float64 `json:"mkfr,omitempty"`
 	// Reference user ID
 	Refu int32   `json:"refu,omitempty"`
 	Refr float64 `json:"refr"`
@@ -232,10 +232,10 @@ type FuturesBalance struct {
 type FuturesReduceRiskLimits struct {
 	CancelOrders    int64   `json:"cancel_orders"`
 	Contract        string  `json:"contract"`
-	LeverageMax     int64   `json:"leverage_max"`
+	LeverageMax     float64 `json:"leverage_max"`
 	LiqPrice        float64 `json:"liq_price"`
 	MaintenanceRate float64 `json:"maintenance_rate"`
-	RiskLimit       int64   `json:"risk_limit"`
+	RiskLimit       float64 `json:"risk_limit"`
 	Time            int64   `json:"time"`
 	TimeMs          int64   `json:"time_ms"`
 	User            string  `json:"user"`
@@ -243,20 +243,20 @@ type FuturesReduceRiskLimits struct {
 
 type FuturesPositions struct {
 	Contract           string  `json:"contract"`
-	CrossLeverageLimit int64   `json:"cross_leverage_limit"`
+	CrossLeverageLimit float64 `json:"cross_leverage_limit"`
 	EntryPrice         float64 `json:"entry_price"`
 	HistoryPnl         float64 `json:"history_pnl"`
 	HistoryPoint       float64 `json:"history_point"`
 	LastClosePnl       float64 `json:"last_close_pnl"`
-	Leverage           int64   `json:"leverage"`
-	LeverageMax        int64   `json:"leverage_max"`
+	Leverage           float64 `json:"leverage"`
+	LeverageMax        float64 `json:"leverage_max"`
 	LiqPrice           float64 `json:"liq_price"`
 	MaintenanceRate    float64 `json:"maintenance_rate"`
 	Margin             float64 `json:"margin"`
 	Mode               string  `json:"mode"`
 	RealisedPnl        float64 `json:"realised_pnl"`
 	RealisedPoint      float64 `json:"realised_point"`
-	RiskLimit          int64   `json:"risk_limit"`
+	RiskLimit          float64 `json:"risk_limit"`
 	Size               int64   `json:"size"`
 	Time               int64   `json:"time"`
 	TimeMs             int64   `json:"time_ms"`

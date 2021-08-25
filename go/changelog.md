@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.5
+
+- update future's models, fix fields wrong type
+
 ## v0.2.4
 
 2021-08-12
