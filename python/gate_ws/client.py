@@ -186,7 +186,8 @@ class Connection(object):
                     if not self.cfg.verify:
                         ctx.check_hostname = False
                         ctx.verify_mode = ssl.CERT_NONE
-                conn = await websockets.connect(self.cfg.host, ssl=ctx)
+                # compression is not fully supported in server
+                conn = await websockets.connect(self.cfg.host, ssl=ctx, compression=None)
                 if retried > 0:
                     logger.warning("reconnect succeeded after retrying %d times", retried + 1)
                     retried = 0
