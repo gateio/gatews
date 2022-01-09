@@ -6,8 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net"
 	"strings"
 	"time"
 
@@ -105,6 +103,9 @@ func (ws *WsService) baseSubscribe(event string, channel string, payload []strin
 	defer func() {
 		ws.mu.Unlock()
 	}()
+	if ws.Client == nil {
+		return fmt.Errorf("ws was closed")
+	}
 	err = ws.Client.WriteMessage(websocket.TextMessage, byteReq)
 	if err != nil {
 		ws.Logger.Printf("wsWrite err:%s", err.Error())
@@ -146,7 +147,7 @@ func (ws *WsService) baseSubscribe(event string, channel string, payload []strin
 func (ws *WsService) readMsg() {
 	ws.once.Do(func() {
 		go func() {
-			defer ws.Client.Close()
+			defer ws.Close()
 
 			for {
 				select {
@@ -154,28 +155,29 @@ func (ws *WsService) readMsg() {
 					ws.Logger.Printf("closing reader")
 					return
 				default:
+					if ws.Client == nil {
+						continue
+					}
+
 					_, message, err := ws.Client.ReadMessage()
 					if err != nil {
-						ne, hasNetErr := err.(net.Error)
-						noe, hasNetOpErr := err.(*net.OpError)
-						if websocket.IsUnexpectedCloseError(err) || (hasNetErr && ne.Timeout()) || (hasNetOpErr && noe != nil) ||
-							websocket.IsCloseError(err) || io.ErrUnexpectedEOF == err {
-							ws.Logger.Printf("websocket err:%s", err.Error())
-							if e := ws.reconnect(); e != nil {
-								ws.Logger.Printf("reconnect err:%s", err.Error())
-								return
-							} else {
-								ws.Logger.Printf("reconnect success, continue read message")
-								continue
-							}
-						} else {
-							ws.Logger.Printf("wsRead err:%s, type:%T", err.Error(), err)
+						ws.Logger.Printf("websocket read err: %s", err.Error())
+
+						ws.Close()
+
+						if e := ws.reconnect(); e != nil {
+							ws.Logger.Printf("reconnect err: %s", err.Error())
 							return
+						} else {
+							ws.Logger.Printf("reconnect success, continue read message")
 						}
+
+						continue
 					}
+
 					var rawTrade UpdateMsg
 					if err := json.Unmarshal(message, &rawTrade); err != nil {
-						ws.Logger.Printf("Unmarshal err:%s, body:%s", err.Error(), string(message))
+						ws.Logger.Printf("Unmarshal err: %s, body: %s", err.Error(), string(message))
 						continue
 					}
 

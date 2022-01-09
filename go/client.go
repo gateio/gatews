@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	mapset "github.com/deckarep/golang-set"
@@ -23,6 +24,8 @@ type WsService struct {
 	msgChs *sync.Map // business chan
 	calls  *sync.Map
 	conf   *ConnConf
+
+	isConnected atomic.Bool
 }
 
 // ConnConf default URL is spot websocket
@@ -101,6 +104,8 @@ func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsS
 		once:   new(sync.Once),
 	}
 
+	ws.isConnected.Store(true)
+
 	go ws.activePing()
 
 	return ws, nil
@@ -175,7 +180,11 @@ func (ws *WsService) reconnect() error {
 			continue
 		} else {
 			stop = true
+
+			ws.mu.Lock()
 			ws.Client = c
+			ws.isConnected.Store(true)
+			ws.mu.Unlock()
 		}
 	}
 
@@ -267,8 +276,21 @@ func (ws *WsService) GetChannels() []string {
 	return channels
 }
 
-func (ws *WsService) GetConnection() *websocket.Conn {
-	return ws.Client
+func (ws *WsService) IsConnected() bool {
+	return ws.isConnected.Load()
+}
+
+func (ws *WsService) Close() {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+	if ws.Client != nil {
+		ws.isConnected.Store(false)
+		if err := ws.Client.Close(); err != nil {
+			ws.Logger.Printf("close err: %s", err.Error())
+		}
+
+		ws.Client = nil
+	}
 }
 
 func (ws *WsService) activePing() {
