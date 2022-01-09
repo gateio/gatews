@@ -7,16 +7,15 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	mapset "github.com/deckarep/golang-set"
 	"github.com/gorilla/websocket"
 )
 
-type status int
-
 const (
-	disconnected status = iota
+	disconnected uint64 = iota
 	connected
 	reconnecting
 )
@@ -30,7 +29,7 @@ type WsService struct {
 	msgChs   *sync.Map // business chan
 	calls    *sync.Map
 	conf     *ConnConf
-	status   status
+	status   atomic.Uint64
 	clientMu *sync.Mutex
 }
 
@@ -108,9 +107,10 @@ func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsS
 		calls:    new(sync.Map),
 		msgChs:   new(sync.Map),
 		once:     new(sync.Once),
-		status:   connected,
 		clientMu: new(sync.Mutex),
 	}
+
+	ws.status.Store(connected)
 
 	go ws.activePing()
 
@@ -172,7 +172,7 @@ func (ws *WsService) GetConnConf() *ConnConf {
 
 func (ws *WsService) reconnect() error {
 	// avoid repeated reconnection
-	if ws.status == reconnecting {
+	if ws.status.Load() == reconnecting {
 		return nil
 	}
 
@@ -183,7 +183,7 @@ func (ws *WsService) reconnect() error {
 		ws.Client.Close()
 	}
 
-	ws.status = reconnecting
+	ws.status.Store(reconnecting)
 
 	stop := false
 	retry := 0
@@ -204,7 +204,7 @@ func (ws *WsService) reconnect() error {
 		}
 	}
 
-	ws.status = connected
+	ws.status.Store(connected)
 
 	// resubscribe after reconnect
 	ws.conf.subscribeMsg.Range(func(key, value interface{}) bool {
@@ -298,6 +298,20 @@ func (ws *WsService) GetConnection() *websocket.Conn {
 	return ws.Client
 }
 
+func (ws *WsService) IsConnected() bool {
+	return ws.status.Load() == connected
+}
+
+func (ws *WsService) Close() {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+	if ws.Client != nil {
+		if err := ws.Client.Close(); err != nil {
+			ws.Logger.Printf("close err: %s", err.Error())
+		}
+	}
+}
+
 func (ws *WsService) activePing() {
 	du, err := time.ParseDuration(ws.conf.PingInterval)
 	if err != nil {
@@ -325,7 +339,7 @@ func (ws *WsService) activePing() {
 				return true
 			})
 
-			if ws.status != connected {
+			if ws.status.Load() != connected {
 				continue
 			}
 
@@ -339,12 +353,12 @@ func (ws *WsService) activePing() {
 	}
 }
 
-var statusString = map[status]string{
+var statusString = map[uint64]string{
 	disconnected: "disconnected",
 	connected:    "connected",
 	reconnecting: "reconnecting",
 }
 
 func (ws *WsService) Status() string {
-	return statusString[ws.status]
+	return statusString[ws.status.Load()]
 }
