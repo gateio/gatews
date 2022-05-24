@@ -14,6 +14,7 @@ import (
 )
 
 type WsService struct {
+	mu     *sync.Mutex
 	Logger *log.Logger
 	Ctx    context.Context
 	Client *websocket.Conn
@@ -25,20 +26,22 @@ type WsService struct {
 
 // ConnConf default URL is spot websocket
 type ConnConf struct {
-	subscribeMsg  *sync.Map
-	URL           string
-	Key           string
-	Secret        string
-	MaxRetryConn  int
-	SkipTlsVerify bool
+	subscribeMsg     *sync.Map
+	URL              string
+	Key              string
+	Secret           string
+	MaxRetryConn     int
+	SkipTlsVerify    bool
+	ShowReconnectMsg bool
 }
 
 type ConfOptions struct {
-	URL           string
-	Key           string
-	Secret        string
-	MaxRetryConn  int
-	SkipTlsVerify bool
+	URL              string
+	Key              string
+	Secret           string
+	MaxRetryConn     int
+	SkipTlsVerify    bool
+	ShowReconnectMsg bool
 }
 
 func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsService, error) {
@@ -85,6 +88,7 @@ func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsS
 	}
 
 	ws := &WsService{
+		mu:     new(sync.Mutex),
 		conf:   cfg,
 		Logger: logger,
 		Ctx:    ctx,
@@ -99,12 +103,13 @@ func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsS
 
 func getInitConnConf() *ConnConf {
 	return &ConnConf{
-		subscribeMsg:  new(sync.Map),
-		MaxRetryConn:  MaxRetryConn,
-		Key:           "",
-		Secret:        "",
-		URL:           BaseUrl,
-		SkipTlsVerify: false,
+		subscribeMsg:     new(sync.Map),
+		MaxRetryConn:     MaxRetryConn,
+		Key:              "",
+		Secret:           "",
+		URL:              BaseUrl,
+		SkipTlsVerify:    false,
+		ShowReconnectMsg: true,
 	}
 }
 
@@ -116,11 +121,13 @@ func NewConnConf(url, key, secret string, maxRetry int) *ConnConf {
 		maxRetry = MaxRetryConn
 	}
 	return &ConnConf{
-		subscribeMsg: new(sync.Map),
-		MaxRetryConn: maxRetry,
-		Key:          key,
-		Secret:       secret,
-		URL:          url,
+		subscribeMsg:     new(sync.Map),
+		MaxRetryConn:     maxRetry,
+		Key:              key,
+		Secret:           secret,
+		URL:              url,
+		SkipTlsVerify:    false,
+		ShowReconnectMsg: true,
 	}
 }
 
@@ -133,11 +140,13 @@ func NewConnConfFromOption(op *ConfOptions) *ConnConf {
 		op.MaxRetryConn = MaxRetryConn
 	}
 	return &ConnConf{
-		subscribeMsg: new(sync.Map),
-		MaxRetryConn: op.MaxRetryConn,
-		Key:          op.Key,
-		Secret:       op.Secret,
-		URL:          op.URL,
+		subscribeMsg:     new(sync.Map),
+		MaxRetryConn:     op.MaxRetryConn,
+		Key:              op.Key,
+		Secret:           op.Secret,
+		URL:              op.URL,
+		SkipTlsVerify:    op.SkipTlsVerify,
+		ShowReconnectMsg: op.ShowReconnectMsg,
 	}
 }
 
@@ -168,18 +177,22 @@ func (ws *WsService) reconnect() error {
 	// resubscribe after reconnect
 	ws.conf.subscribeMsg.Range(func(key, value interface{}) bool {
 		// key is channel, value is []requestHistory
-		for _, req := range value.([]requestHistory) {
-			if req.op == nil {
-				req.op = &SubscribeOptions{
-					IsReConnect: true,
+		if _, ok := value.([]requestHistory); ok {
+			for _, req := range value.([]requestHistory) {
+				if req.op == nil {
+					req.op = &SubscribeOptions{
+						IsReConnect: true,
+					}
+				} else {
+					req.op.IsReConnect = true
 				}
-			} else {
-				req.op.IsReConnect = true
-			}
-			if err := ws.baseSubscribe(req.Event, req.Channel, req.Payload, req.op); err != nil {
-				ws.Logger.Printf("after reconnect, subscribe channel[%s] err:%s", key.(string), err.Error())
-			} else {
-				ws.Logger.Printf("reconnect channel[%s] with payload[%v] success", key.(string), req.Payload)
+				if err := ws.baseSubscribe(req.Event, req.Channel, req.Payload, req.op); err != nil {
+					ws.Logger.Printf("after reconnect, subscribe channel[%s] err:%s", key.(string), err.Error())
+				} else {
+					if ws.conf.ShowReconnectMsg {
+						ws.Logger.Printf("reconnect channel[%s] with payload[%v] success", key.(string), req.Payload)
+					}
+				}
 			}
 		}
 		return true

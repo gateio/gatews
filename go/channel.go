@@ -6,10 +6,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"io"
 	"net"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 type SubscribeOptions struct {
@@ -165,8 +166,17 @@ func (ws *WsService) readMsg() {
 						continue
 					}
 
-					if bch, ok := ws.msgChs.Load(rawTrade.Channel); ok {
-						bch.(chan *UpdateMsg) <- &rawTrade
+					if rawTrade.Channel != "" {
+						if bch, ok := ws.msgChs.Load(rawTrade.Channel); ok {
+							select {
+							case <-ws.Ctx.Done():
+								return
+							default:
+								if _, ok := ws.msgChs.Load(rawTrade.Channel); ok {
+									bch.(chan *UpdateMsg) <- &rawTrade
+								}
+							}
+						}
 					}
 				}
 			}

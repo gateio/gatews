@@ -46,14 +46,14 @@ func main() {
 		log.Printf("%+v", trade)
 	})
 	// first, we need set callback function
-	ws.SetCallBack(gate.ChannelSpotOrder, callOrder)
+	ws.SetCallBack(gate.ChannelSpotBookTicker, callOrder)
 	ws.SetCallBack(gate.ChannelSpotPublicTrade, callTrade)
 	// second, after set callback function, subscribe to any channel you are interested into
-	if err := ws.Subscribe(gate.ChannelSpotPublicTrade, []string{"BCH_USDT"}); err != nil {
+	if err := ws.Subscribe(gate.ChannelSpotPublicTrade, []string{"BTC_USDT"}); err != nil {
 		log.Printf("Subscribe err:%s", err.Error())
 		return
 	}
-	if err := ws.Subscribe(gate.ChannelSpotOrder, []string{"BCH_USDT"}); err != nil {
+	if err := ws.Subscribe(gate.ChannelSpotBookTicker, []string{"BTC_USDT"}); err != nil {
 		log.Printf("Subscribe err:%s", err.Error())
 		return
 	}

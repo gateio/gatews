@@ -3,6 +3,9 @@ package gatews
 import (
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 	"testing"
 )
 
@@ -85,7 +88,7 @@ func TestGetConf(t *testing.T) {
 
 func TestGetConfFromOption(t *testing.T) {
 	ws, err := NewWsService(nil, nil, NewConnConfFromOption(&ConfOptions{
-		"", "KEY", "SECRET", 10,
+		URL: "", Key: "KEY", Secret: "SECRET", MaxRetryConn: 10,
 	}))
 	if err != nil {
 		log.Fatal(err)
@@ -100,4 +103,38 @@ func TestGetConfFromOption(t *testing.T) {
 	fmt.Println(ws.GetKey())
 	fmt.Println(ws.GetSecret())
 	fmt.Println(ws.GetMaxRetryConn())
+}
+
+func TestMultiClients(t *testing.T) {
+	for i := 0; i < 100; i++ {
+		go connWs()
+	}
+
+	ch := make(chan os.Signal)
+	signal.Ignore(syscall.SIGPIPE, syscall.SIGALRM)
+	signal.Notify(ch, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT, syscall.SIGABRT, syscall.SIGKILL)
+	<-ch
+}
+
+func connWs() {
+	ws, err := NewWsService(nil, nil, NewConnConfFromOption(&ConfOptions{
+		URL: "", MaxRetryConn: 10, ShowReconnectMsg: true,
+	}))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	call := NewCallBack(func(msg *UpdateMsg) {
+		// fmt.Println(string(msg.Result))
+	})
+	ws.SetCallBack(ChannelSpotBookTicker, call)
+	if err := ws.Subscribe(ChannelSpotBookTicker, []string{"BTC_USDT"}); err != nil {
+		log.Fatalf("Subscribe err:%s", err.Error())
+		return
+	}
+
+	ch := make(chan os.Signal)
+	signal.Ignore(syscall.SIGPIPE, syscall.SIGALRM)
+	signal.Notify(ch, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT, syscall.SIGABRT, syscall.SIGKILL)
+	<-ch
 }

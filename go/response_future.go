@@ -29,6 +29,9 @@ type FuturesTicker struct {
 	IndexPrice string `json:"index_price,omitempty"`
 	// Exchange rate of base currency and settlement currency in Quanto contract. Not existed in contract of other types
 	QuantoBaseRate string `json:"quanto_base_rate,omitempty"`
+
+	Low24h  string `json:"low_24h"`
+	High24h string `json:"high_24h"`
 }
 
 type FuturesTrade struct {
@@ -106,7 +109,8 @@ type FuturesCandlestick struct {
 	// Open price
 	O string `json:"o,omitempty"`
 	// futures contract name
-	N string `json:"n"`
+	N      string `json:"n"`
+	Amount string `json:"a"`
 }
 
 type FuturesOrder struct {
@@ -166,6 +170,7 @@ type FuturesUserTrade struct {
 	Price        string `json:"price"`
 	Size         int64  `json:"size"`
 	Role         string `json:"role"`
+	Text         string `json:"text"`
 }
 type FuturesLiquidate struct {
 	// Liquidation time
@@ -220,13 +225,14 @@ type FuturesPositionCloses struct {
 }
 
 type FuturesBalance struct {
-	Balance float64 `json:"balance"`
-	Change  float64 `json:"change"`
-	Text    string  `json:"text"`
-	Time    int64   `json:"time"`
-	TimeMs  int64   `json:"time_ms"`
-	User    string  `json:"user"`
-	Type    string  `json:"type"`
+	Balance  float64 `json:"balance"`
+	Change   float64 `json:"change"`
+	Text     string  `json:"text"`
+	Time     int64   `json:"time"`
+	TimeMs   int64   `json:"time_ms"`
+	User     string  `json:"user"`
+	Type     string  `json:"type"`
+	Currency string  `json:"currency"`
 }
 
 type FuturesReduceRiskLimits struct {
@@ -283,6 +289,7 @@ type FuturesAutoOrder struct {
 	Reason      string `json:"reason,omitempty"`
 	Name        string `json:"name"`
 	IsStopOrder bool   `json:"is_stop_order"`
+	FinishAs    string `json:"finish_as"`
 }
 
 type FutureStopTrigger struct {

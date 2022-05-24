@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.2.6
+
+2022-05-24
+
+- fix reconnect panic
+- update spot and futures models
+- add `ShowReconnectMsg` config field to decide to show reconnect success msg
+- update some test cases
+
 ## v0.2.5
 
 - update future's models, fix fields wrong type

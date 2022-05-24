@@ -18,6 +18,7 @@ type SpotCandleUpdateMsg struct {
 	Low    string `json:"l"`
 	Open   string `json:"o"`
 	Name   string `json:"n"`
+	Amount string `json:"a"`
 }
 
 // SpotUpdateDepthMsg update order book
