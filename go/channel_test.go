@@ -34,7 +34,9 @@ func TestNilCallBack(t *testing.T) {
 }
 
 func TestSubscribeFutures(t *testing.T) {
-	ws, err := NewWsService(nil, nil, NewConnConf(FuturesUsdtUrl, "", "", 10))
+	ws, err := NewWsService(nil, nil, NewConnConfFromOption(&ConfOptions{
+		URL: FuturesUsdtUrl, Key: "", Secret: "", MaxRetryConn: 10,
+	}))
 	if err != nil {
 		log.Fatal(err)
 	}

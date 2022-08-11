@@ -3,6 +3,7 @@ package gatews
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -33,6 +34,7 @@ type ConnConf struct {
 	MaxRetryConn     int
 	SkipTlsVerify    bool
 	ShowReconnectMsg bool
+	PingInterval     string
 }
 
 type ConfOptions struct {
@@ -42,6 +44,7 @@ type ConfOptions struct {
 	MaxRetryConn     int
 	SkipTlsVerify    bool
 	ShowReconnectMsg bool
+	PingInterval     string
 }
 
 func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsService, error) {
@@ -52,11 +55,11 @@ func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsS
 		ctx = context.Background()
 	}
 
-	var cfg *ConnConf
+	defaultConf := getInitConnConf()
 	if conf != nil {
-		cfg = conf
+		conf = applyOptionConf(defaultConf, conf)
 	} else {
-		cfg = getInitConnConf()
+		conf = defaultConf
 	}
 
 	stop := false
@@ -64,13 +67,13 @@ func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsS
 	var conn *websocket.Conn
 	for !stop {
 		dialer := websocket.DefaultDialer
-		if cfg.SkipTlsVerify {
+		if conf.SkipTlsVerify {
 			dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		}
-		c, _, err := dialer.Dial(cfg.URL, nil)
+		c, _, err := dialer.Dial(conf.URL, nil)
 		if err != nil {
-			if retry >= cfg.MaxRetryConn {
-				log.Printf("max reconnect time %d reached, give it up", cfg.MaxRetryConn)
+			if retry >= conf.MaxRetryConn {
+				log.Printf("max reconnect time %d reached, give it up", conf.MaxRetryConn)
 				return nil, err
 			}
 			retry++
@@ -89,7 +92,7 @@ func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsS
 
 	ws := &WsService{
 		mu:     new(sync.Mutex),
-		conf:   cfg,
+		conf:   conf,
 		Logger: logger,
 		Ctx:    ctx,
 		Client: conn,
@@ -97,6 +100,8 @@ func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsS
 		msgChs: new(sync.Map),
 		once:   new(sync.Once),
 	}
+
+	go ws.activePing()
 
 	return ws, nil
 }
@@ -110,25 +115,24 @@ func getInitConnConf() *ConnConf {
 		URL:              BaseUrl,
 		SkipTlsVerify:    false,
 		ShowReconnectMsg: true,
+		PingInterval:     DefaultPingInterval,
 	}
 }
 
-func NewConnConf(url, key, secret string, maxRetry int) *ConnConf {
-	if url == "" {
-		url = BaseUrl
+func applyOptionConf(defaultConf, userConf *ConnConf) *ConnConf {
+	if userConf.URL == "" {
+		userConf.URL = defaultConf.URL
 	}
-	if maxRetry == 0 {
-		maxRetry = MaxRetryConn
+
+	if userConf.MaxRetryConn == 0 {
+		userConf.MaxRetryConn = defaultConf.MaxRetryConn
 	}
-	return &ConnConf{
-		subscribeMsg:     new(sync.Map),
-		MaxRetryConn:     maxRetry,
-		Key:              key,
-		Secret:           secret,
-		URL:              url,
-		SkipTlsVerify:    false,
-		ShowReconnectMsg: true,
+
+	if userConf.PingInterval == "" {
+		userConf.PingInterval = defaultConf.PingInterval
 	}
+
+	return userConf
 }
 
 // NewConnConfFromOption conf from options, recommend using this
@@ -147,6 +151,7 @@ func NewConnConfFromOption(op *ConfOptions) *ConnConf {
 		URL:              op.URL,
 		SkipTlsVerify:    op.SkipTlsVerify,
 		ShowReconnectMsg: op.ShowReconnectMsg,
+		PingInterval:     op.PingInterval,
 	}
 }
 
@@ -264,4 +269,38 @@ func (ws *WsService) GetChannels() []string {
 
 func (ws *WsService) GetConnection() *websocket.Conn {
 	return ws.Client
+}
+
+func (ws *WsService) activePing() {
+	du, err := time.ParseDuration(ws.conf.PingInterval)
+	if err != nil {
+		ws.Logger.Printf("failed to parse ping interval: %s, use default ping interval 10s instead", ws.conf.PingInterval)
+		du, err = time.ParseDuration(DefaultPingInterval)
+		if err != nil {
+			du = time.Second * 10
+		}
+	}
+
+	ticker := time.NewTicker(du)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ws.Ctx.Done():
+			return
+		case <-ticker.C:
+			subscribeMap := map[string]int{}
+			ws.conf.subscribeMsg.Range(func(key, value any) bool {
+				splits := strings.Split(key.(string), ".")
+				if len(splits) == 2 {
+					subscribeMap[splits[0]] = 1
+				}
+				return true
+			})
+
+			for app := range subscribeMap {
+				ws.Subscribe(fmt.Sprintf("%s.ping", app), nil)
+			}
+		}
+	}
 }

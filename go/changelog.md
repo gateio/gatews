@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.2.7
+
+2022-08-11
+
+- remove client method `NewConnConf`. Recommend to use `NewConnConfFromOption` instead
+- add new config field `PingInterval` to send ping message
+- add default ping message to avoid to be closed by server
+
 ## v0.2.6
 
 2022-05-24

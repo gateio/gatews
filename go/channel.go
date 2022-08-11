@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -107,6 +108,10 @@ func (ws *WsService) baseSubscribe(event string, channel string, payload []strin
 		return err
 	}
 
+	if strings.HasSuffix(channel, "ping") {
+		return nil
+	}
+
 	if v, ok := ws.conf.subscribeMsg.Load(channel); ok {
 		if op != nil && op.IsReConnect {
 			return nil
@@ -198,7 +203,8 @@ func (ws *WsService) SetCallBack(channel string, call callBack) {
 }
 
 func (ws *WsService) receiveCallMsg(channel string, msgCh chan *UpdateMsg) {
-	defer close(msgCh)
+	// avoid send closed channel error
+	// defer close(msgCh)
 	for {
 		select {
 		case <-ws.Ctx.Done():

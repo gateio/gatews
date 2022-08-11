@@ -68,8 +68,9 @@ func TestGetChannels(t *testing.T) {
 }
 
 func TestGetConf(t *testing.T) {
-	ws, err := NewWsService(nil, nil, NewConnConf(
-		"", "KEY", "SECRET", 10))
+	ws, err := NewWsService(nil, nil, NewConnConfFromOption(&ConfOptions{
+		URL: "", Key: "KEY", Secret: "SECRET", MaxRetryConn: 10,
+	}))
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -72,4 +72,6 @@ const (
 
 	ServiceTypeSpot    = 1
 	ServiceTypeFutures = 2
+
+	DefaultPingInterval = "10s"
 )
