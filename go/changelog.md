@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.8
+
+2022-10-21
+
+- futures model `FuturesUserTrade` add fields `fee` and `point_fee`
+- avoid saving `ping` and `time` subscribe msg in request history
+
 ## v0.2.7
 
 2022-08-11

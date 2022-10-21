@@ -124,6 +124,11 @@ func (ws *WsService) baseSubscribe(event string, channel string, payload []strin
 		})
 		ws.conf.subscribeMsg.Store(channel, reqs)
 	} else {
+		// avoid saving invalid subscribe msg
+		if strings.HasSuffix(channel, ".ping") || strings.HasSuffix(channel, ".time") {
+			return nil
+		}
+
 		ws.conf.subscribeMsg.Store(channel, []requestHistory{{
 			Channel: channel,
 			Event:   event,

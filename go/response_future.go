@@ -164,13 +164,15 @@ type FuturesUserTrade struct {
 	// Trading time
 	CreateTime int64 `json:"create_time,omitempty"`
 	// Trading time, with milliseconds set to 3 decimal places.
-	CreateTimeMs int64  `json:"create_time_ms,omitempty"`
-	Id           string `json:"id"`
-	OrderId      string `json:"order_id"`
-	Price        string `json:"price"`
-	Size         int64  `json:"size"`
-	Role         string `json:"role"`
-	Text         string `json:"text"`
+	CreateTimeMs int64   `json:"create_time_ms,omitempty"`
+	Id           string  `json:"id"`
+	OrderId      string  `json:"order_id"`
+	Price        string  `json:"price"`
+	Size         int64   `json:"size"`
+	Role         string  `json:"role"`
+	Text         string  `json:"text"`
+	Fee          float64 `json:"fee"`
+	PointFee     float64 `json:"point_fee"`
 }
 type FuturesLiquidate struct {
 	// Liquidation time
