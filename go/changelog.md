@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.0
+
+2022-11-22
+
+- add common response field `time_ms` for time of message created
+
 ## v0.2.8
 
 2022-10-21

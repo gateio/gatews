@@ -7,6 +7,7 @@ import (
 
 type UpdateMsg struct {
 	Time    int64           `json:"time"`
+	TimeMs  int64           `json:"time_ms"`
 	Id      *int64          `json:"id,omitempty"`
 	Channel string          `json:"channel"`
 	Event   string          `json:"event"`
