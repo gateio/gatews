@@ -8,6 +8,9 @@ type SpotBalancesMsg struct {
 	Change           string `json:"change"`
 	Total            string `json:"total"`
 	Available        string `json:"available"`
+	Freeze           string `json:"freeze"`
+	FreezeChange     string `json:"freeze_change"`
+	ChangeType       string `json:"change_type"`
 }
 
 type SpotCandleUpdateMsg struct {

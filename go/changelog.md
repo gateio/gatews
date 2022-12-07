@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.4.0
+
+2022-12-07
+
+- spot balance add fields `freeze`,`freeze_change` and `change_type`
+
 ## v0.3.0
 
 2022-11-22
