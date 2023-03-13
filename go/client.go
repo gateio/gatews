@@ -290,7 +290,7 @@ func (ws *WsService) activePing() {
 			return
 		case <-ticker.C:
 			subscribeMap := map[string]int{}
-			ws.conf.subscribeMsg.Range(func(key, value any) bool {
+			ws.conf.subscribeMsg.Range(func(key, value interface{}) bool {
 				splits := strings.Split(key.(string), ".")
 				if len(splits) == 2 {
 					subscribeMap[splits[0]] = 1
