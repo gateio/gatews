@@ -157,6 +157,9 @@ type FuturesOrder struct {
 	// Reference user ID
 	Refu int32   `json:"refu,omitempty"`
 	Refr float64 `json:"refr"`
+
+	StopProfitPrice string `json:"stop_profit_price"`
+	StopLossPrice   string `json:"stop_loss_price"`
 }
 
 type FuturesUserTrade struct {
@@ -292,6 +295,8 @@ type FuturesAutoOrder struct {
 	Name        string `json:"name"`
 	IsStopOrder bool   `json:"is_stop_order"`
 	FinishAs    string `json:"finish_as"`
+	MeOrderId   int64  `json:"me_order_id"`
+	OrderType   string `json:"order_type"`
 }
 
 type FutureStopTrigger struct {
@@ -328,5 +333,6 @@ type FuturesInitialOrder struct {
 	// Is the order reduce-only
 	IsReduceOnly bool `json:"is_reduce_only,omitempty"`
 	// Is the order to close position
-	IsClose bool `json:"is_close,omitempty"`
+	IsClose  bool   `json:"is_close,omitempty"`
+	AutoSize string `json:"auto_size"`
 }

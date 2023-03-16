@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.4.1
+
+2023-03-16
+
+- fix subscribe msg concurrent write cause panic
+- add `FuturesOrder` response field `stop_profit_price` and `stop_loss_price`
+- add `FuturesAutoOrder` response field `me_order_id`, `order_type` and `initial.auto_size`
+
 ## v0.4.0
 
 2022-12-07
