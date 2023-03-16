@@ -101,7 +101,10 @@ func (ws *WsService) baseSubscribe(event string, channel string, payload []strin
 		ws.Logger.Printf("req Marshal err:%s", err.Error())
 		return err
 	}
-
+	ws.mu.Lock()
+	defer func() {
+		ws.mu.Unlock()
+	}()
 	err = ws.Client.WriteMessage(websocket.TextMessage, byteReq)
 	if err != nil {
 		ws.Logger.Printf("wsWrite err:%s", err.Error())
