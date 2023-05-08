@@ -3,7 +3,6 @@ package gatews
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -12,6 +11,13 @@ import (
 
 	mapset "github.com/deckarep/golang-set"
 	"github.com/gorilla/websocket"
+)
+
+type status int
+
+const (
+	disconnected status = iota
+	connected
 )
 
 type WsService struct {
@@ -23,6 +29,7 @@ type WsService struct {
 	msgChs *sync.Map // business chan
 	calls  *sync.Map
 	conf   *ConnConf
+	status status
 }
 
 // ConnConf default URL is spot websocket
@@ -49,7 +56,7 @@ type ConfOptions struct {
 
 func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsService, error) {
 	if logger == nil {
-		logger = log.New(os.Stdout, "", 0)
+		logger = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
 	}
 	if ctx == nil {
 		ctx = context.Background()
@@ -99,6 +106,7 @@ func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsS
 		calls:  new(sync.Map),
 		msgChs: new(sync.Map),
 		once:   new(sync.Once),
+		status: connected,
 	}
 
 	go ws.activePing()
@@ -298,8 +306,15 @@ func (ws *WsService) activePing() {
 				return true
 			})
 
+			if ws.status == disconnected {
+				continue
+			}
+
 			for app := range subscribeMap {
-				ws.Subscribe(fmt.Sprintf("%s.ping", app), nil)
+				channel := app + ".ping"
+				if err := ws.Subscribe(channel, nil); err != nil {
+					ws.Logger.Printf("subscribe channel[%s] failed: %v", channel, err)
+				}
 			}
 		}
 	}
