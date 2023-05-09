@@ -6,8 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net"
 	"strings"
 	"time"
 
@@ -30,12 +28,7 @@ func (ws *WsService) Subscribe(channel string, payload []string) error {
 		go ws.receiveCallMsg(channel, msgCh.(chan *UpdateMsg))
 	}
 
-	err := ws.newBaseChannel(channel, payload, msgCh.(chan *UpdateMsg), nil)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return ws.newBaseChannel(channel, payload, msgCh.(chan *UpdateMsg), nil)
 }
 
 func (ws *WsService) SubscribeWithOption(channel string, payload []string, op *SubscribeOptions) error {
@@ -49,12 +42,7 @@ func (ws *WsService) SubscribeWithOption(channel string, payload []string, op *S
 		go ws.receiveCallMsg(channel, msgCh.(chan *UpdateMsg))
 	}
 
-	err := ws.newBaseChannel(channel, payload, msgCh.(chan *UpdateMsg), op)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return ws.newBaseChannel(channel, payload, msgCh.(chan *UpdateMsg), op)
 }
 
 func (ws *WsService) UnSubscribe(channel string, payload []string) error {
@@ -105,9 +93,10 @@ func (ws *WsService) baseSubscribe(event string, channel string, payload []strin
 	defer func() {
 		ws.mu.Unlock()
 	}()
+
 	err = ws.Client.WriteMessage(websocket.TextMessage, byteReq)
 	if err != nil {
-		ws.Logger.Printf("wsWrite err:%s", err.Error())
+		ws.Logger.Printf("wsWrite [%s] err:%s", channel, err.Error())
 		return err
 	}
 
@@ -156,23 +145,16 @@ func (ws *WsService) readMsg() {
 				default:
 					_, message, err := ws.Client.ReadMessage()
 					if err != nil {
-						ne, hasNetErr := err.(net.Error)
-						noe, hasNetOpErr := err.(*net.OpError)
-						if websocket.IsUnexpectedCloseError(err) || (hasNetErr && ne.Timeout()) || (hasNetOpErr && noe != nil) ||
-							websocket.IsCloseError(err) || io.ErrUnexpectedEOF == err {
-							ws.Logger.Printf("websocket err:%s", err.Error())
-							if e := ws.reconnect(); e != nil {
-								ws.Logger.Printf("reconnect err:%s", err.Error())
-								return
-							} else {
-								ws.Logger.Printf("reconnect success, continue read message")
-								continue
-							}
-						} else {
-							ws.Logger.Printf("wsRead err:%s, type:%T", err.Error(), err)
+						ws.Logger.Printf("websocket err: %s", err.Error())
+						if e := ws.reconnect(); e != nil {
+							ws.Logger.Printf("reconnect err:%s", err.Error())
 							return
+						} else {
+							ws.Logger.Println("reconnect success, continue read message")
+							continue
 						}
 					}
+
 					var rawTrade UpdateMsg
 					if err := json.Unmarshal(message, &rawTrade); err != nil {
 						ws.Logger.Printf("Unmarshal err:%s, body:%s", err.Error(), string(message))

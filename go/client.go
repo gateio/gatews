@@ -3,7 +3,6 @@ package gatews
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -14,15 +13,25 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type status int
+
+const (
+	disconnected status = iota
+	connected
+	reconnecting
+)
+
 type WsService struct {
-	mu     *sync.Mutex
-	Logger *log.Logger
-	Ctx    context.Context
-	Client *websocket.Conn
-	once   *sync.Once
-	msgChs *sync.Map // business chan
-	calls  *sync.Map
-	conf   *ConnConf
+	mu       *sync.Mutex
+	Logger   *log.Logger
+	Ctx      context.Context
+	Client   *websocket.Conn
+	once     *sync.Once
+	msgChs   *sync.Map // business chan
+	calls    *sync.Map
+	conf     *ConnConf
+	status   status
+	clientMu *sync.Mutex
 }
 
 // ConnConf default URL is spot websocket
@@ -49,7 +58,7 @@ type ConfOptions struct {
 
 func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsService, error) {
 	if logger == nil {
-		logger = log.New(os.Stdout, "", 0)
+		logger = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
 	}
 	if ctx == nil {
 		ctx = context.Background()
@@ -91,14 +100,16 @@ func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsS
 	}
 
 	ws := &WsService{
-		mu:     new(sync.Mutex),
-		conf:   conf,
-		Logger: logger,
-		Ctx:    ctx,
-		Client: conn,
-		calls:  new(sync.Map),
-		msgChs: new(sync.Map),
-		once:   new(sync.Once),
+		mu:       new(sync.Mutex),
+		conf:     conf,
+		Logger:   logger,
+		Ctx:      ctx,
+		Client:   conn,
+		calls:    new(sync.Map),
+		msgChs:   new(sync.Map),
+		once:     new(sync.Once),
+		status:   connected,
+		clientMu: new(sync.Mutex),
 	}
 
 	go ws.activePing()
@@ -160,6 +171,20 @@ func (ws *WsService) GetConnConf() *ConnConf {
 }
 
 func (ws *WsService) reconnect() error {
+	// avoid repeated reconnection
+	if ws.status == reconnecting {
+		return nil
+	}
+
+	ws.clientMu.Lock()
+	defer ws.clientMu.Unlock()
+
+	if ws.Client != nil {
+		ws.Client.Close()
+	}
+
+	ws.status = reconnecting
+
 	stop := false
 	retry := 0
 	for !stop {
@@ -178,6 +203,8 @@ func (ws *WsService) reconnect() error {
 			ws.Client = c
 		}
 	}
+
+	ws.status = connected
 
 	// resubscribe after reconnect
 	ws.conf.subscribeMsg.Range(func(key, value interface{}) bool {
@@ -298,9 +325,26 @@ func (ws *WsService) activePing() {
 				return true
 			})
 
+			if ws.status != connected {
+				continue
+			}
+
 			for app := range subscribeMap {
-				ws.Subscribe(fmt.Sprintf("%s.ping", app), nil)
+				channel := app + ".ping"
+				if err := ws.Subscribe(channel, nil); err != nil {
+					ws.Logger.Printf("subscribe channel[%s] failed: %v", channel, err)
+				}
 			}
 		}
 	}
+}
+
+var statusString = map[status]string{
+	disconnected: "disconnected",
+	connected:    "connected",
+	reconnecting: "reconnecting",
+}
+
+func (ws *WsService) Status() string {
+	return statusString[ws.status]
 }

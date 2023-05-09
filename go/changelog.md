@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.4.2
+
+2023-05-09
+
+- no longer try websocket ping after disconnect
+- support querying websocket connection status
+
 ## v0.4.1
 
 2023-03-16
@@ -128,7 +135,7 @@
 
 - Support futures websocket.
 - Modify channels name to with flag `Spot` or `Future`.
-- Add field `TimestampInMilli`  in models `SpotBalancesMsg`, `SpotFundingBalancesMsg`, `SpotMarginBalancesMsg`. Add
+- Add field `TimestampInMilli` in models `SpotBalancesMsg`, `SpotFundingBalancesMsg`, `SpotMarginBalancesMsg`. Add
   field `TimeInMilli` in model `SpotBookTickerMsg`
 - Add new method `NewConnConfFromOption` to get a ConnConf flexible.
 - Add new method `SubscribeWithOption` to support futures subscribe with id.
