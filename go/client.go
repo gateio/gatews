@@ -18,18 +18,20 @@ type status int
 const (
 	disconnected status = iota
 	connected
+	reconnecting
 )
 
 type WsService struct {
-	mu     *sync.Mutex
-	Logger *log.Logger
-	Ctx    context.Context
-	Client *websocket.Conn
-	once   *sync.Once
-	msgChs *sync.Map // business chan
-	calls  *sync.Map
-	conf   *ConnConf
-	status status
+	mu       *sync.Mutex
+	Logger   *log.Logger
+	Ctx      context.Context
+	Client   *websocket.Conn
+	once     *sync.Once
+	msgChs   *sync.Map // business chan
+	calls    *sync.Map
+	conf     *ConnConf
+	status   status
+	clientMu *sync.Mutex
 }
 
 // ConnConf default URL is spot websocket
@@ -98,15 +100,16 @@ func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsS
 	}
 
 	ws := &WsService{
-		mu:     new(sync.Mutex),
-		conf:   conf,
-		Logger: logger,
-		Ctx:    ctx,
-		Client: conn,
-		calls:  new(sync.Map),
-		msgChs: new(sync.Map),
-		once:   new(sync.Once),
-		status: connected,
+		mu:       new(sync.Mutex),
+		conf:     conf,
+		Logger:   logger,
+		Ctx:      ctx,
+		Client:   conn,
+		calls:    new(sync.Map),
+		msgChs:   new(sync.Map),
+		once:     new(sync.Once),
+		status:   connected,
+		clientMu: new(sync.Mutex),
 	}
 
 	go ws.activePing()
@@ -168,6 +171,20 @@ func (ws *WsService) GetConnConf() *ConnConf {
 }
 
 func (ws *WsService) reconnect() error {
+	// avoid repeated reconnection
+	if ws.status == reconnecting {
+		return nil
+	}
+
+	ws.clientMu.Lock()
+	defer ws.clientMu.Unlock()
+
+	if ws.Client != nil {
+		ws.Client.Close()
+	}
+
+	ws.status = reconnecting
+
 	stop := false
 	retry := 0
 	for !stop {
@@ -186,6 +203,8 @@ func (ws *WsService) reconnect() error {
 			ws.Client = c
 		}
 	}
+
+	ws.status = connected
 
 	// resubscribe after reconnect
 	ws.conf.subscribeMsg.Range(func(key, value interface{}) bool {
@@ -306,7 +325,7 @@ func (ws *WsService) activePing() {
 				return true
 			})
 
-			if ws.status == disconnected {
+			if ws.status != connected {
 				continue
 			}
 
@@ -318,4 +337,14 @@ func (ws *WsService) activePing() {
 			}
 		}
 	}
+}
+
+var statusString = map[status]string{
+	disconnected: "disconnected",
+	connected:    "connected",
+	reconnecting: "reconnecting",
+}
+
+func (ws *WsService) Status() string {
+	return statusString[ws.status]
 }

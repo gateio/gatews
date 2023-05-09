@@ -2,9 +2,10 @@
 
 ## v0.4.2
 
-2023-05-07
+2023-05-09
 
 - no longer try websocket ping after disconnect
+- support querying websocket connection status
 
 ## v0.4.1
 

@@ -1,12 +1,14 @@
 package gatews
 
+import "math"
+
 const (
 	BaseUrl        = "wss://api.gateio.ws/ws/v4/"
 	FuturesBtcUrl  = "wss://fx-ws.gateio.ws/v4/ws/btc"
 	FuturesUsdtUrl = "wss://fx-ws.gateio.ws/v4/ws/usdt"
 
 	AuthMethodApiKey = "api_key"
-	MaxRetryConn     = 10
+	MaxRetryConn     = math.MaxInt64
 )
 
 // spot channels
@@ -44,27 +46,25 @@ const (
 	ChannelFutureAutoOrders       = "futures.autoorders"
 )
 
-var (
-	authChannel = map[string]bool{
-		// spot
-		ChannelSpotBalance:        true,
-		ChannelSpotFundingBalance: true,
-		ChannelSpotMarginBalance:  true,
-		ChannelSpotOrder:          true,
-		ChannelSpotUserTrade:      true,
+var authChannel = map[string]bool{
+	// spot
+	ChannelSpotBalance:        true,
+	ChannelSpotFundingBalance: true,
+	ChannelSpotMarginBalance:  true,
+	ChannelSpotOrder:          true,
+	ChannelSpotUserTrade:      true,
 
-		// future
-		ChannelFutureOrder:            true,
-		ChannelFutureUserTrade:        true,
-		ChannelFutureLiquidates:       true,
-		ChannelFutureAutoDeleverages:  true,
-		ChannelFuturePositionCloses:   true,
-		ChannelFutureReduceRiskLimits: true,
-		ChannelFuturePositions:        true,
-		ChannelFutureAutoOrders:       true,
-		ChannelFutureBalance:          true,
-	}
-)
+	// future
+	ChannelFutureOrder:            true,
+	ChannelFutureUserTrade:        true,
+	ChannelFutureLiquidates:       true,
+	ChannelFutureAutoDeleverages:  true,
+	ChannelFuturePositionCloses:   true,
+	ChannelFutureReduceRiskLimits: true,
+	ChannelFuturePositions:        true,
+	ChannelFutureAutoOrders:       true,
+	ChannelFutureBalance:          true,
+}
 
 const (
 	Subscribe   = "subscribe"
