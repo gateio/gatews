@@ -135,7 +135,7 @@ func (ws *WsService) baseSubscribe(event string, channel string, payload []strin
 func (ws *WsService) readMsg() {
 	ws.once.Do(func() {
 		go func() {
-			defer ws.Client.Close()
+			defer ws.Close()
 
 			for {
 				select {
@@ -157,7 +157,7 @@ func (ws *WsService) readMsg() {
 
 					var rawTrade UpdateMsg
 					if err := json.Unmarshal(message, &rawTrade); err != nil {
-						ws.Logger.Printf("Unmarshal err:%s, body:%s", err.Error(), string(message))
+						ws.Logger.Printf("Unmarshal err: %s, body: %s", err.Error(), string(message))
 						continue
 					}
 
