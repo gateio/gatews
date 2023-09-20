@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/tls"
 	"log"
+	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -44,6 +46,7 @@ type ConnConf struct {
 	SkipTlsVerify    bool
 	ShowReconnectMsg bool
 	PingInterval     string
+	Proxy            func(r *http.Request) (*url.URL, error)
 }
 
 type ConfOptions struct {
@@ -54,6 +57,16 @@ type ConfOptions struct {
 	SkipTlsVerify    bool
 	ShowReconnectMsg bool
 	PingInterval     string
+	Proxy            func(r *http.Request) (*url.URL, error)
+}
+
+func (conf *ConnConf) GetDialer() *websocket.Dialer {
+	dialer := websocket.DefaultDialer
+	if conf.Proxy != nil {
+		dialer.Proxy = conf.Proxy
+	}
+
+	return dialer
 }
 
 func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsService, error) {
@@ -75,7 +88,7 @@ func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsS
 	retry := 0
 	var conn *websocket.Conn
 	for !stop {
-		dialer := websocket.DefaultDialer
+		dialer := conf.GetDialer()
 		if conf.SkipTlsVerify {
 			dialer.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		}
@@ -163,6 +176,7 @@ func NewConnConfFromOption(op *ConfOptions) *ConnConf {
 		SkipTlsVerify:    op.SkipTlsVerify,
 		ShowReconnectMsg: op.ShowReconnectMsg,
 		PingInterval:     op.PingInterval,
+		Proxy:            op.Proxy,
 	}
 }
 
@@ -188,7 +202,7 @@ func (ws *WsService) reconnect() error {
 	stop := false
 	retry := 0
 	for !stop {
-		c, _, err := websocket.DefaultDialer.Dial(ws.conf.URL, nil)
+		c, _, err := ws.conf.GetDialer().Dial(ws.conf.URL, nil)
 		if err != nil {
 			if retry >= ws.conf.MaxRetryConn {
 				ws.Logger.Printf("max reconnect time %d reached, give it up", ws.conf.MaxRetryConn)
