@@ -25,6 +25,15 @@ const (
 	ChannelSpotFundingBalance  = "spot.funding_balances"
 	ChannelSpotMarginBalance   = "spot.margin_balances"
 	ChannelSpotCrossBalance    = "spot.cross_balances"
+
+	// order
+	ChannelSpotLogin          = "spot.login"
+	ChannelSpotOrderAmend     = "spot.order_amend"
+	ChannelSpotOrderCancel    = "spot.order_cancel"
+	ChannelSpotOrderCancelCp  = "spot.order_cancel_cp"
+	ChannelSpotOrderCancelIds = "spot.order_cancel_ids"
+	ChannelSpotOrderPlace     = "spot.order_place"
+	ChannelSpotOrderStatus    = "spot.order_status"
 )
 
 // future channels
@@ -44,6 +53,16 @@ const (
 	ChannelFutureReduceRiskLimits = "futures.reduce_risk_limits"
 	ChannelFuturePositions        = "futures.positions"
 	ChannelFutureAutoOrders       = "futures.autoorders"
+
+	// order
+	ChannelFutureLogin           = "futures.login"
+	ChannelFutureOrderAmend      = "futures.order_amend"
+	ChannelFutureOrderCancel     = "futures.order_cancel"
+	ChannelFutureOrderCancelCp   = "futures.order_cancel_cp"
+	ChannelFutureOrderPlace      = "futures.order_place"
+	ChannelFutureOrderBatchPlace = "futures.order_batch_place"
+	ChannelFutureOrderStatus     = "futures.order_status"
+	ChannelFutureOrderList       = "futures.order_list"
 )
 
 var authChannel = map[string]bool{
@@ -69,6 +88,7 @@ var authChannel = map[string]bool{
 const (
 	Subscribe   = "subscribe"
 	UnSubscribe = "unsubscribe"
+	API         = "api"
 
 	ServiceTypeSpot    = 1
 	ServiceTypeFutures = 2
