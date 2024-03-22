@@ -22,20 +22,22 @@ const (
 )
 
 type WsService struct {
-	mu       *sync.Mutex
-	Logger   *log.Logger
-	Ctx      context.Context
-	Client   *websocket.Conn
-	once     *sync.Once
-	msgChs   *sync.Map // business chan
-	calls    *sync.Map
-	conf     *ConnConf
-	status   status
-	clientMu *sync.Mutex
+	mu        *sync.Mutex
+	Logger    *log.Logger
+	Ctx       context.Context
+	Client    *websocket.Conn
+	once      *sync.Once
+	loginOnce *sync.Once
+	msgChs    *sync.Map // business chan
+	calls     *sync.Map
+	conf      *ConnConf
+	status    status
+	clientMu  *sync.Mutex
 }
 
 // ConnConf default URL is spot websocket
 type ConnConf struct {
+	App              string
 	subscribeMsg     *sync.Map
 	URL              string
 	Key              string
@@ -47,6 +49,7 @@ type ConnConf struct {
 }
 
 type ConfOptions struct {
+	App              string
 	URL              string
 	Key              string
 	Secret           string
@@ -100,16 +103,17 @@ func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsS
 	}
 
 	ws := &WsService{
-		mu:       new(sync.Mutex),
-		conf:     conf,
-		Logger:   logger,
-		Ctx:      ctx,
-		Client:   conn,
-		calls:    new(sync.Map),
-		msgChs:   new(sync.Map),
-		once:     new(sync.Once),
-		status:   connected,
-		clientMu: new(sync.Mutex),
+		mu:        new(sync.Mutex),
+		conf:      conf,
+		Logger:    logger,
+		Ctx:       ctx,
+		Client:    conn,
+		calls:     new(sync.Map),
+		msgChs:    new(sync.Map),
+		once:      new(sync.Once),
+		loginOnce: new(sync.Once),
+		status:    connected,
+		clientMu:  new(sync.Mutex),
 	}
 
 	go ws.activePing()
@@ -119,6 +123,7 @@ func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsS
 
 func getInitConnConf() *ConnConf {
 	return &ConnConf{
+		App:              "spot",
 		subscribeMsg:     new(sync.Map),
 		MaxRetryConn:     MaxRetryConn,
 		Key:              "",
@@ -131,6 +136,10 @@ func getInitConnConf() *ConnConf {
 }
 
 func applyOptionConf(defaultConf, userConf *ConnConf) *ConnConf {
+	if userConf.App == "" {
+		userConf.App = defaultConf.App
+	}
+
 	if userConf.URL == "" {
 		userConf.URL = defaultConf.URL
 	}
@@ -155,6 +164,7 @@ func NewConnConfFromOption(op *ConfOptions) *ConnConf {
 		op.MaxRetryConn = MaxRetryConn
 	}
 	return &ConnConf{
+		App:              op.App,
 		subscribeMsg:     new(sync.Map),
 		MaxRetryConn:     op.MaxRetryConn,
 		Key:              op.Key,
@@ -262,14 +272,19 @@ func (ws *WsService) GetChannelMarkets(channel string) []string {
 	set := mapset.NewSet()
 	if v, ok := ws.conf.subscribeMsg.Load(channel); ok {
 		for _, req := range v.([]requestHistory) {
+			payloads, ok := req.Payload.([]string)
+			if !ok {
+				continue
+			}
+
 			if req.Event == Subscribe {
-				for _, pl := range req.Payload {
+				for _, pl := range payloads {
 					if strings.Contains(pl, "_") {
 						set.Add(pl)
 					}
 				}
 			} else {
-				for _, pl := range req.Payload {
+				for _, pl := range payloads {
 					if strings.Contains(pl, "_") {
 						set.Remove(pl)
 					}

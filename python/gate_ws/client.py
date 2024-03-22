@@ -17,30 +17,30 @@ logger = logging.getLogger(__name__)
 
 
 class GateWebsocketError(Exception):
-
     def __init__(self, code, message):
         self.code = code
         self.message = message
 
     def __str__(self):
-        return 'code: %d, message: %s' % (self.code, self.message)
+        return "code: %d, message: %s" % (self.code, self.message)
 
 
 class Configuration(object):
-
-    def __init__(self,
-                 app: str = 'spot',
-                 settle: str = 'usdt',
-                 test_net: bool = False,
-                 host: str = None,
-                 api_key: str = '',
-                 api_secret: str = '',
-                 event_loop=None,
-                 executor_pool=None,
-                 default_callback=None,
-                 ping_interval: int = 5,
-                 max_retry: int = 10,
-                 verify: bool = True):
+    def __init__(
+        self,
+        app: str = "spot",
+        settle: str = "usdt",
+        test_net: bool = False,
+        host: str = "",
+        api_key: str = "",
+        api_secret: str = "",
+        event_loop=None,
+        executor_pool=None,
+        default_callback=None,
+        ping_interval: int = 5,
+        max_retry: int = 10,
+        verify: bool = True,
+    ):
         """Initialize running configuration
 
         @param app: Which websocket to connect to, spot or futures, default to spot
@@ -62,11 +62,11 @@ class Configuration(object):
         self.app = app
         self.api_key = api_key
         self.api_secret = api_secret
-        default_host = 'wss://api.gateio.ws/ws/v4/'
-        if app == 'futures':
-            default_host = 'wss://fx-ws.gateio.ws/v4/ws/%s' % settle
+        default_host = "wss://api.gateio.ws/ws/v4/"
+        if app == "futures":
+            default_host = "wss://fx-ws.gateio.ws/v4/ws/%s" % settle
             if test_net:
-                default_host = 'wss://fx-ws-testnet.gateio.ws/v4/ws/%s' % settle
+                default_host = "wss://fx-ws-testnet.gateio.ws/v4/ws/%s" % settle
         self.host = host or default_host
         self.loop = event_loop
         self.pool = executor_pool
@@ -77,8 +77,14 @@ class Configuration(object):
 
 
 class WebSocketRequest(object):
-
-    def __init__(self, cfg: Configuration, channel: str, event: str, payload: str, require_auth: bool):
+    def __init__(
+        self,
+        cfg: Configuration,
+        channel: str,
+        event: str,
+        payload: str,
+        require_auth: bool,
+    ):
         self.channel = channel
         self.event = event
         self.payload = payload
@@ -87,49 +93,108 @@ class WebSocketRequest(object):
 
     def __str__(self):
         request = {
-            'time': int(time.time()),
-            'channel': self.channel,
-            'event': self.event,
-            'payload': self.payload,
+            "time": int(time.time()),
+            "channel": self.channel,
+            "event": self.event,
+            "payload": self.payload,
         }
         if self.require_auth:
             if not (self.cfg.api_key and self.cfg.api_secret):
                 raise ValueError("configuration does not provide api key or secret")
-            message = "channel=%s&event=%s&time=%d" % (self.channel, self.event, request['time'])
-            request['auth'] = {
+            message = "channel=%s&event=%s&time=%d" % (
+                self.channel,
+                self.event,
+                request["time"],
+            )
+            request["auth"] = {
                 "method": "api_key",
                 "KEY": self.cfg.api_key,
-                "SIGN": hmac.new(self.cfg.api_secret.encode("utf8"), message.encode("utf8"),
-                                 hashlib.sha512).hexdigest()
+                "SIGN": hmac.new(
+                    self.cfg.api_secret.encode("utf8"),
+                    message.encode("utf8"),
+                    hashlib.sha512,
+                ).hexdigest(),
             }
         return json.dumps(request)
 
 
-class WebSocketResponse(object):
+class ApiRequest(object):
+    def __init__(
+        self,
+        cfg: Configuration,
+        channel: str,
+        header: str = "",
+        req_id: str = "",
+        payload: object = {},
+    ):
+        self.cfg = cfg
+        if not (self.cfg.api_key and self.cfg.api_secret):
+            raise ValueError("configuration does not provide api key or secret")
+        self.channel = channel
+        self.header = header
+        self.req_id = req_id
+        self.payload = payload
 
+    def gen(self):
+        data_time = int(time.time())
+        param_json = json.dumps(self.payload)
+        message = "%s\n%s\n%s\n%d" % ("api", self.channel, param_json, data_time)
+
+        data_param = {
+            "time": data_time,
+            "channel": self.channel,
+            "event": "api",
+            "payload": {
+                "req_header": {"X-Gate-Channel-Id": self.header},
+                "api_key": self.cfg.api_key,
+                "timestamp": f"{data_time}",
+                "signature": hmac.new(
+                    self.cfg.api_secret.encode("utf8"),
+                    message.encode("utf8"),
+                    hashlib.sha512,
+                ).hexdigest(),
+                "req_id": self.req_id,
+                "req_param": self.payload,
+            },
+        }
+
+        return json.dumps(data_param)
+
+
+class WebSocketResponse(object):
     def __init__(self, body: str):
         self.body = body
         msg = json.loads(body)
-        self.channel = msg.get('channel')
+        self.channel = msg.get("channel") or (msg.get("header") or {}).get("channel")
         if not self.channel:
             raise ValueError("no channel found from response message: %s" % body)
 
-        self.timestamp = msg.get('time')
-        self.event = msg.get('event')
-        self.result = msg.get('result')
+        self.timestamp = msg.get("time")
+        self.event = msg.get("event")
+        self.result = (
+            msg.get("result")
+            or (msg.get("data") or {}).get("result")
+            or (msg.get("data") or {}).get("errs")
+        )
         self.error = None
-        if msg.get('error'):
-            self.error = GateWebsocketError(msg['error'].get('code'), msg['error'].get('message'))
+        if msg.get("error"):
+            self.error = GateWebsocketError(
+                msg["error"].get("code"), msg["error"].get("message")
+            )
+
+    def __str__(self) -> str:
+        return self.body
 
 
 class Connection(object):
-
     def __init__(self, cfg: Configuration):
         self.cfg = cfg
         self.channels: typing.Dict[str, typing.Any] = dict()
         self.sending_queue = asyncio.Queue()
         self.sending_history = list()
-        self.event_loop: asyncio.AbstractEventLoop = cfg.loop or asyncio.get_event_loop()
+        self.event_loop: asyncio.AbstractEventLoop = (
+            cfg.loop or asyncio.get_event_loop()
+        )
         self.main_loop = None
 
     def register(self, channel, callback=None):
@@ -144,7 +209,9 @@ class Connection(object):
 
     async def _active_ping(self, conn: websockets.WebSocketClientProtocol):
         while True:
-            data = json.dumps({'time': int(time.time()), 'channel': '%s.ping' % self.cfg.app})
+            data = json.dumps(
+                {"time": int(time.time()), "channel": "%s.ping" % self.cfg.app}
+            )
             await conn.send(data)
             await asyncio.sleep(self.cfg.ping_interval)
 
@@ -169,7 +236,9 @@ class Connection(object):
                 if asyncio.iscoroutinefunction(callback):
                     self.event_loop.create_task(callback(self, response))
                 else:
-                    self.event_loop.run_in_executor(self.cfg.pool, callback, self, response)
+                    self.event_loop.run_in_executor(
+                        self.cfg.pool, callback, self, response
+                    )
 
     def close(self):
         if self.main_loop:
@@ -181,23 +250,33 @@ class Connection(object):
         while not stopped:
             try:
                 ctx = None
-                if self.cfg.host.startswith('wss://'):
+                if self.cfg.host.startswith("wss://"):
                     ctx = ssl.create_default_context()
                     if not self.cfg.verify:
                         ctx.check_hostname = False
                         ctx.verify_mode = ssl.CERT_NONE
                 # compression is not fully supported in server
-                conn = await websockets.connect(self.cfg.host, ssl=ctx, compression=None)
+                conn = await websockets.connect(
+                    self.cfg.host, ssl=ctx, compression=None
+                )
                 if retried > 0:
-                    logger.warning("reconnect succeeded after retrying %d times", retried + 1)
+                    logger.warning(
+                        "reconnect succeeded after retrying %d times", retried + 1
+                    )
                     retried = 0
             # DNS might be resolved to multiple address, which cause multiple ConnectionRefusedError
             # being combined to one OSError
             except (WebSocketException, ConnectionRefusedError, OSError) as e:
-                logger.warning("failed to connect to server for the %d time, try again later: %s", retried + 1, e)
+                logger.warning(
+                    "failed to connect to server for the %d time, try again later: %s",
+                    retried + 1,
+                    e,
+                )
                 retried += 1
                 if 0 < self.cfg.max_retry < retried:
-                    logger.error("max reconnect time %d reached, give it up", self.cfg.max_retry)
+                    logger.error(
+                        "max reconnect time %d reached, give it up", self.cfg.max_retry
+                    )
                     stopped = True
                     continue
                 await asyncio.sleep(0.5 * retried)
@@ -221,7 +300,7 @@ class Connection(object):
 
 
 class BaseChannel(abc.ABC):
-    name = ''
+    name = ""
     require_auth = False
 
     def __init__(self, conn: Connection, callback=None):
@@ -230,8 +309,26 @@ class BaseChannel(abc.ABC):
         self.cfg = self.conn.cfg
         self.conn.register(self.name, callback)
 
-    def subscribe(self, payload=None):
-        self.conn.send(WebSocketRequest(self.cfg, self.name, 'subscribe', payload, self.require_auth))
+    def subscribe(self, payload={}):
+        self.conn.send(
+            WebSocketRequest(
+                self.cfg, self.name, "subscribe", payload, self.require_auth
+            )
+        )
 
-    def unsubscribe(self, payload=None):
-        self.conn.send(WebSocketRequest(self.cfg, self.name, 'unsubscribe', payload, self.require_auth))
+    def unsubscribe(self, payload={}):
+        self.conn.send(
+            WebSocketRequest(
+                self.cfg, self.name, "unsubscribe", payload, self.require_auth
+            )
+        )
+
+    def api_request(self, payload={}, header="", req_id=""):
+        self.login(header, req_id)
+        self.conn.send(ApiRequest(self.cfg, self.name, header, req_id, payload).gen())
+
+    def login(self, header, req_id):
+        channel = "spot.login"
+        if self.cfg.app != "spot":
+            channel = "futures.login"
+        self.conn.send(ApiRequest(self.cfg, channel, header, req_id, {}).gen())
