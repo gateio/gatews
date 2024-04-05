@@ -137,7 +137,7 @@ type OrderMsg struct {
 	// SpotOrderMsg last modification time
 	UpdateTime string `json:"update_time,omitempty"`
 	// SpotOrderMsg status  - `open`: to be filled - `closed`: filled - `cancelled`: cancelled
-	Status string `json:"status,omitempty"`
+	Status string `json:"finish_as,omitempty"`
 	// Currency pair
 	CurrencyPair string `json:"currency_pair"`
 	// SpotOrderMsg type. limit - limit order
