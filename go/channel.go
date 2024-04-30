@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,7 +32,7 @@ func (ws *WsService) Subscribe(channel string, payload []string) error {
 	return ws.newBaseChannel(channel, payload, msgCh.(chan *UpdateMsg), nil)
 }
 
-func (ws *WsService) SubscribeWithOption(channel string, payload []string, op *SubscribeOptions) error {
+func (ws *WsService) SubscribeWithOption(channel string, payload any, op *SubscribeOptions) error {
 	if (ws.conf.Key == "" || ws.conf.Secret == "") && authChannel[channel] {
 		return newAuthEmptyErr()
 	}
@@ -49,7 +50,7 @@ func (ws *WsService) UnSubscribe(channel string, payload []string) error {
 	return ws.baseSubscribe(UnSubscribe, channel, payload, nil)
 }
 
-func (ws *WsService) newBaseChannel(channel string, payload []string, bch chan *UpdateMsg, op *SubscribeOptions) error {
+func (ws *WsService) newBaseChannel(channel string, payload any, bch chan *UpdateMsg, op *SubscribeOptions) error {
 	err := ws.baseSubscribe(Subscribe, channel, payload, op)
 	if err != nil {
 		return err
@@ -64,7 +65,7 @@ func (ws *WsService) newBaseChannel(channel string, payload []string, bch chan *
 	return nil
 }
 
-func (ws *WsService) baseSubscribe(event string, channel string, payload []string, op *SubscribeOptions) error {
+func (ws *WsService) baseSubscribe(event, channel string, payload any, op *SubscribeOptions) error {
 	ts := time.Now().Unix()
 	hash := hmac.New(sha512.New, []byte(ws.conf.Secret))
 	hash.Write([]byte(fmt.Sprintf("channel=%s&event=%s&time=%d", channel, Subscribe, ts)))
@@ -90,9 +91,7 @@ func (ws *WsService) baseSubscribe(event string, channel string, payload []strin
 		return err
 	}
 	ws.mu.Lock()
-	defer func() {
-		ws.mu.Unlock()
-	}()
+	defer ws.mu.Unlock()
 
 	err = ws.Client.WriteMessage(websocket.TextMessage, byteReq)
 	if err != nil {
@@ -142,34 +141,37 @@ func (ws *WsService) readMsg() {
 				case <-ws.Ctx.Done():
 					ws.Logger.Printf("closing reader")
 					return
+
 				default:
-					_, message, err := ws.Client.ReadMessage()
+					_, rawMsg, err := ws.Client.ReadMessage()
 					if err != nil {
 						ws.Logger.Printf("websocket err: %s", err.Error())
 						if e := ws.reconnect(); e != nil {
 							ws.Logger.Printf("reconnect err:%s", err.Error())
 							return
-						} else {
-							ws.Logger.Println("reconnect success, continue read message")
-							continue
 						}
-					}
-
-					var rawTrade UpdateMsg
-					if err := json.Unmarshal(message, &rawTrade); err != nil {
-						ws.Logger.Printf("Unmarshal err:%s, body:%s", err.Error(), string(message))
+						ws.Logger.Println("reconnect success, continue read message")
 						continue
 					}
 
-					if rawTrade.Channel != "" {
-						if bch, ok := ws.msgChs.Load(rawTrade.Channel); ok {
-							select {
-							case <-ws.Ctx.Done():
-								return
-							default:
-								if _, ok := ws.msgChs.Load(rawTrade.Channel); ok {
-									bch.(chan *UpdateMsg) <- &rawTrade
-								}
+					var msg UpdateMsg
+					if err := json.Unmarshal(rawMsg, &msg); err != nil {
+						continue
+					}
+
+					channel := msg.GetChannel()
+					if channel == "" {
+						ws.Logger.Printf("channel is empty in message %v", msg)
+						return
+					}
+
+					if bch, ok := ws.msgChs.Load(channel); ok {
+						select {
+						case <-ws.Ctx.Done():
+							return
+						default:
+							if _, ok := ws.msgChs.Load(channel); ok {
+								bch.(chan *UpdateMsg) <- &msg
 							}
 						}
 					}
@@ -179,13 +181,13 @@ func (ws *WsService) readMsg() {
 	})
 }
 
-type callBack func(*UpdateMsg)
+type CallBack func(*UpdateMsg)
 
 func NewCallBack(f func(*UpdateMsg)) func(*UpdateMsg) {
 	return f
 }
 
-func (ws *WsService) SetCallBack(channel string, call callBack) {
+func (ws *WsService) SetCallBack(channel string, call CallBack) {
 	if call == nil {
 		return
 	}
@@ -202,8 +204,113 @@ func (ws *WsService) receiveCallMsg(channel string, msgCh chan *UpdateMsg) {
 			return
 		case msg := <-msgCh:
 			if call, ok := ws.calls.Load(channel); ok {
-				call.(callBack)(msg)
+				call.(CallBack)(msg)
 			}
 		}
 	}
+}
+
+func (ws *WsService) APIRequest(channel string, payload any, keyVals map[string]any) error {
+	var err error
+	ws.loginOnce.Do(func() {
+		err = ws.login()
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if (ws.conf.Key == "" || ws.conf.Secret == "") && authChannel[channel] {
+		return newAuthEmptyErr()
+	}
+
+	msgCh, ok := ws.msgChs.Load(channel)
+	if !ok {
+		msgCh = make(chan *UpdateMsg, 1)
+		go ws.receiveCallMsg(channel, msgCh.(chan *UpdateMsg))
+	}
+
+	if _, ok := ws.msgChs.Load(channel); !ok {
+		ws.msgChs.Store(channel, msgCh)
+	}
+
+	ws.readMsg()
+
+	return ws.apiRequest(channel, payload, keyVals)
+}
+
+func (ws *WsService) login() error {
+	if ws.conf.Key == "" || ws.conf.Secret == "" {
+		return newAuthEmptyErr()
+	}
+	channel := ChannelSpotLogin
+	if ws.conf.App == "futures" {
+		channel = ChannelFutureLogin
+	}
+	msgCh, ok := ws.msgChs.Load(channel)
+	if !ok {
+		msgCh = make(chan *UpdateMsg, 1)
+		go ws.receiveCallMsg(channel, msgCh.(chan *UpdateMsg))
+	}
+
+	if _, ok := ws.msgChs.Load(channel); !ok {
+		ws.msgChs.Store(channel, msgCh)
+	}
+
+	ws.readMsg()
+
+	return ws.apiRequest(channel, nil, nil)
+}
+
+func (ws *WsService) apiRequest(channel string, payload any, keyVals map[string]any) error {
+	req := Request{
+		Time:    time.Now().Unix(),
+		Channel: channel,
+		Event:   API,
+		Payload: ws.generateAPIRequest(channel, payload, keyVals),
+	}
+
+	byteReq, err := json.Marshal(req)
+	if err != nil {
+		ws.Logger.Printf("req Marshal err:%s", err.Error())
+		return err
+	}
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+
+	return ws.Client.WriteMessage(websocket.TextMessage, byteReq)
+}
+
+func (ws *WsService) generateAPIRequest(channel string, placeParam any, keyVals map[string]any) any {
+	reqID := "req_id"
+	gateChannelID := "T_channel_id"
+
+	if v, ok := keyVals["req_id"]; ok {
+		reqID, _ = v.(string)
+	}
+
+	if v, ok := keyVals["X-Gate-Channel-Id"]; ok {
+		gateChannelID, _ = v.(string)
+	}
+
+	now := time.Now().Unix()
+
+	reqParam, _ := json.Marshal(placeParam)
+
+	message := fmt.Sprintf("api\n%s\n%s\n%d", channel, reqParam, now)
+
+	return APIReq{
+		ApiKey:    ws.conf.Key,
+		Signature: calculateSignature(ws.conf.Secret, message),
+		Timestamp: strconv.Itoa(int(now)),
+		ReqId:     reqID,
+		ReqHeader: json.RawMessage(fmt.Sprintf(`{"X-Gate-Channel-Id":"%s"}`, gateChannelID)),
+		ReqParam:  reqParam,
+	}
+}
+
+func calculateSignature(secret string, message string) string {
+	h := hmac.New(sha512.New, []byte(secret))
+	h.Write([]byte(message))
+	return hex.EncodeToString(h.Sum(nil))
 }
