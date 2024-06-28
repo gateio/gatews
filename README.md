@@ -1,3 +1,4 @@
+[BTC_1D_graph_coinmarketcap.csv](https://github.com/user-attachments/files/16036963/BTC_1D_graph_coinmarketcap.csv)
 
 # gatews - Gate.io WebSocket SDK
 
