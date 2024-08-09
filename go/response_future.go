@@ -29,9 +29,8 @@ type FuturesTicker struct {
 	IndexPrice string `json:"index_price,omitempty"`
 	// Exchange rate of base currency and settlement currency in Quanto contract. Not existed in contract of other types
 	QuantoBaseRate string `json:"quanto_base_rate,omitempty"`
-
-	Low24h  string `json:"low_24h"`
-	High24h string `json:"high_24h"`
+	Low24h         string `json:"low_24h"`
+	High24h        string `json:"high_24h"`
 }
 
 type FuturesTrade struct {
@@ -124,10 +123,19 @@ type FuturesOrder struct {
 	// Order finished time. Not returned if order is open
 	FinishTime   int64 `json:"finish_time,omitempty"`
 	FinishTimeMs int64 `json:"finish_time_ms,omitempty"`
-	// How the order is finished.  - filled: all filled - cancelled: manually cancelled - liquidated: cancelled because of liquidation - ioc: time in force is `IOC`, finish immediately - auto_deleveraged: finished by ADL - reduce_only: cancelled because of increasing position while `reduce-only` set
+	// FinishAs indicates how the order was completed:
+	// - filled: all filled
+	// - cancelled: manually cancelled
+	// - liquidated: cancelled due to liquidation
+	// - ioc: time in force is IOC, finished immediately
+	// - auto_deleveraged: finished by ADL
+	// - reduce_only: cancelled due to increase in position while reduce-only set
+	// - position_closed: cancelled due to position close
+	// - stp: cancelled due to self trade prevention
+	// - _new: order created
+	// - _update: order filled, partially filled, or updated
+	// - reduce_out: only reduce position, excluding pending orders hard to execute
 	FinishAs string `json:"finish_as,omitempty"`
-	// Order status  - `open`: waiting to be traded - `finished`: finished
-	Status string `json:"status,omitempty"`
 	// Futures contract
 	Contract string `json:"contract"`
 	// Order size. Specify positive number to make a bid, and negative number to ask
@@ -160,6 +168,18 @@ type FuturesOrder struct {
 
 	StopProfitPrice string `json:"stop_profit_price"`
 	StopLossPrice   string `json:"stop_loss_price"`
+	// StpId represents the ID associated with the self-trade prevention mechanism.
+	StpId int64 `json:"stp_id,omitempty"`
+	// StpAct represents the self-trade prevention (STP) action:
+	// - cn: Cancel newest (keep old orders)
+	// - co: Cancel oldest (keep new orders)
+	// - cb: Cancel both (cancel both old and new orders)
+	// If not provided, defaults to 'cn'. Requires STP group membership; otherwise, an error is returned.
+	StpAct string `json:"stp_act,omitempty"`
+	// BizInfo represents business-specific information related to the order. The exact content and format can vary depending on the use case.
+	BizInfo string `json:"biz_info,omitempty"`
+	// AmendText provides the custom data that the user remarked when amending the order
+	AmendText string `json:"amend_text,omitempty"`
 }
 
 type FuturesUserTrade struct {
@@ -177,6 +197,7 @@ type FuturesUserTrade struct {
 	Fee          float64 `json:"fee"`
 	PointFee     float64 `json:"point_fee"`
 }
+
 type FuturesLiquidate struct {
 	// Liquidation time
 	Time int64 `json:"time,omitempty"`

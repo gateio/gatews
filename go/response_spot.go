@@ -14,14 +14,15 @@ type SpotBalancesMsg struct {
 }
 
 type SpotCandleUpdateMsg struct {
-	Time   string `json:"t"`
-	Volume string `json:"v"`
-	Close  string `json:"c"`
-	High   string `json:"h"`
-	Low    string `json:"l"`
-	Open   string `json:"o"`
-	Name   string `json:"n"`
-	Amount string `json:"a"`
+	Time        string `json:"t"`
+	Volume      string `json:"v"`
+	Close       string `json:"c"`
+	High        string `json:"h"`
+	Low         string `json:"l"`
+	Open        string `json:"o"`
+	Name        string `json:"n"`
+	Amount      string `json:"a"`
+	WindowClose bool   `json:"w"`
 }
 
 // SpotUpdateDepthMsg update order book
@@ -115,6 +116,8 @@ type SpotUserTradesMsg struct {
 	PointFee     string `json:"point_fee"`
 	GtFee        string `json:"gt_fee"`
 	Text         string `json:"text"`
+	AmendText    string `json:"amend_text"`
+	BizInfo      string `json:"biz_info"`
 }
 
 type SpotTradeMsg struct {
@@ -136,8 +139,6 @@ type OrderMsg struct {
 	CreateTime string `json:"create_time,omitempty"`
 	// SpotOrderMsg last modification time
 	UpdateTime string `json:"update_time,omitempty"`
-	// SpotOrderMsg status  - `open`: to be filled - `closed`: filled - `cancelled`: cancelled
-	Status string `json:"status,omitempty"`
 	// Currency pair
 	CurrencyPair string `json:"currency_pair"`
 	// SpotOrderMsg type. limit - limit order
@@ -162,6 +163,8 @@ type OrderMsg struct {
 	FillPrice string `json:"fill_price,omitempty"`
 	// Total filled in quote currency
 	FilledTotal string `json:"filled_total,omitempty"`
+	// Average fill price
+	AvgDealPrice string `json:"avg_deal_price,omitempty"`
 	// Fee deducted
 	Fee string `json:"fee,omitempty"`
 	// Fee currency unit
@@ -176,6 +179,25 @@ type OrderMsg struct {
 	RebatedFee string `json:"rebated_fee,omitempty"`
 	// Rebated fee currency unit
 	RebatedFeeCurrency string `json:"rebated_fee_currency,omitempty"`
+	// StpId represents the ID associated with the self-trade prevention mechanism.
+	StpId int64 `json:"stp_id,omitempty"`
+	// StpAct represents the self-trade prevention (STP) action:
+	// - cn: Cancel newest (keep old orders)
+	// - co: Cancel oldest (keep new orders)
+	// - cb: Cancel both (cancel both old and new orders)
+	// If not provided, defaults to 'cn'. Requires STP group membership; otherwise, an error is returned.
+	StpAct string `json:"stp_act,omitempty"`
+	// FinishAs indicates how the order was finished:
+	// - open: processing
+	// - filled: fully filled
+	// - cancelled: manually cancelled
+	// - ioc: finished immediately (IOC)
+	// - stp: cancelled due to self-trade prevention
+	FinishAs string `json:"finish_as,omitempty"`
+	// BizInfo represents business-specific information related to the order. The exact content and format can vary depending on the use case.
+	BizInfo string `json:"biz_info,omitempty"`
+	// AmendText provides the custom data that the user remarked when amending the order
+	AmendText string `json:"amend_text,omitempty"`
 }
 
 type SpotOrderMsg struct {
