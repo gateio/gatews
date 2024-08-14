@@ -41,31 +41,34 @@ func main() {
 
 	// create callback functions for receive messages
 	callOrder := gate.NewCallBack(func(msg *gate.UpdateMsg) {
+		if msg.Event != "update" {
+			return
+		}
 		// parse the message to struct we need
 		var order []gate.SpotOrderMsg
 		if err := json.Unmarshal(msg.Result, &order); err != nil {
-			log.Printf("order Unmarshal err:%s", err.Error())
+			log.Printf("order %s unmarshal err: %v", msg.Result, err)
 		}
-		log.Printf("%+v", order)
+		log.Printf("order: %+v", order)
 	})
 
 	callTrade := gate.NewCallBack(func(msg *gate.UpdateMsg) {
 		var trade gate.SpotTradeMsg
 		if err := json.Unmarshal(msg.Result, &trade); err != nil {
-			log.Printf("trade Unmarshal err:%s", err.Error())
+			log.Printf("trade %s unmarshal err: %v", msg.Result, err)
 		}
-		log.Printf("%+v", trade)
+		log.Printf("trade: %+v", trade)
 	})
 
 	// first, we need set callback function
 	ws.SetCallBack(gate.ChannelSpotOrder, callOrder)
 	ws.SetCallBack(gate.ChannelSpotPublicTrade, callTrade)
 	// second, after set callback function, subscribe to any channel you are interested into
-	if err := ws.Subscribe(gate.ChannelSpotPublicTrade, []string{"BTC_USDT"}); err != nil {
+	if err := ws.Subscribe(gate.ChannelSpotOrder, []string{"BTC_USDT"}); err != nil {
 		log.Printf("Subscribe err:%s", err.Error())
 		return
 	}
-	if err := ws.Subscribe(gate.ChannelSpotBookTicker, []string{"BTC_USDT"}); err != nil {
+	if err := ws.Subscribe(gate.ChannelSpotPublicTrade, []string{"BTC_USDT"}); err != nil {
 		log.Printf("Subscribe err:%s", err.Error())
 		return
 	}
