@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.5.1
+
+2024-08-14
+
+- added recent new fields
+
 ## v0.5.0
 
 2024-04-30
