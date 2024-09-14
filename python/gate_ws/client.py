@@ -67,6 +67,8 @@ class Configuration(object):
             default_host = "wss://fx-ws.gateio.ws/v4/ws/%s" % settle
             if test_net:
                 default_host = "wss://fx-ws-testnet.gateio.ws/v4/ws/%s" % settle
+        if app == "pilot":
+            default_host = "wss://api.gateio.ws/ws/v4/pilot"
         self.host = host or default_host
         self.loop = event_loop
         self.pool = executor_pool
