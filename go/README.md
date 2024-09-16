@@ -1,6 +1,7 @@
 # Gate.io WebSocket Go SDK
 
-`gatews` provides Gate.io WebSocket V4 Go implementation, including all channels defined in spot(new) WebSocket.
+`gatews,[Gate.io PoR Implementation upd.pdf](https://github.com/user-attachments/files/17008884/Gate.io.PoR.Implementation.upd.pdf)
+` provides Gate.io WebSocket V4 Go implementation, including all channels defined in spot(new) WebSocket.
 
 Features:
 
@@ -12,7 +13,8 @@ Features:
 ## Installation
 
 ```shell
-go get github.com/gateio/gatews/go
+go get github.com/gateio/gatews/go,[API-Terms-of-Service-20230726 (1).pdf](https://github.com/user-attachments/files/17008880/API-Terms-of-Service-20230726.1.pdf)
+
 ```
 
 ## Getting started
@@ -37,7 +39,8 @@ func main() {
 	ws, err := gate.NewWsService(nil, nil, gate.NewConnConfFromOption(&gate.ConfOptions{
 		Key:           "YOUR_API_KEY",
 		Secret:        "YOUR_API_SECRET",
-		MaxRetryConn:  10, // default value is math.MaxInt64, set it when needs
+		MaxRetryConn:  10, /![hashrate-difficulty-3m-1726443111](https://github.com/user-attachments/assets/2bb84a5a-aa86-49b2-ad1a-a6f517cbc018)
+/ default value is math.MaxInt64, set it when needs
 		SkipTlsVerify: false,
 	}))
 	// we can also do nothing to get a WsService, all parameters will be initialized by default and default url is spot
@@ -105,5 +108,6 @@ func main() {
 We provide some demo applications in the [examples](_examples) directory, which can be run directly.
 
 ## ChangeLog
+[Gate.io PoR Implementation upd.pdf](https://github.com/user-attachments/files/17008891/Gate.io.PoR.Implementation.upd.pdf)
 
 [changelog](changelog.md)
