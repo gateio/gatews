@@ -1,6 +1,6 @@
-# Gate.io WebSocket Go SDK
+# Gate WebSocket Go SDK
 
-`gatews` provides Gate.io WebSocket V4 Go implementation, including all channels defined in spot(new) WebSocket.
+`gatews` provides Gate WebSocket V4 Go implementation, including all channels defined in spot(new) WebSocket.
 
 Features:
 

@@ -1,6 +1,6 @@
-# Gate.io WebSocket Python SDK
+# Gate WebSocket Python SDK
 
-`gate_ws` provides Gate.io WebSocket V4 Python implementation, including all channels defined in
+`gate_ws` provides Gate WebSocket V4 Python implementation, including all channels defined in
 spot(new) and futures WebSocket.
 
 Features:

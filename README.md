@@ -1,9 +1,9 @@
 
-# gatews - Gate.io WebSocket SDK
+# gatews - Gate WebSocket SDK
 
-`gatews` provides new Gate.io WebSocket V4 implementations. It is intended to
+`gatews` provides new Gate WebSocket V4 implementations. It is intended to
 work along with `gateapi-*` series to provide a quick way for developers to
-integrate Gate.io tradings.
+integrate Gate tradings.
 
 > This repository is meant to replace [WebSocket-API](https://github.com/gateio/WebSocket-API).
 > The latter will not accept any new feature requirements.
