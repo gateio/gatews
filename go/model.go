@@ -21,14 +21,24 @@ type UpdateMsg struct {
 			Message string `json:"message"`
 		} `json:"errs"`
 	} `json:"data"`
+	RequestID string `json:"request_id"`
+	Ack       bool   `json:"ack"`
 }
 
 type ResponseHeader struct {
-	ResponseTime string `json:"response_time"`
-	Status       string `json:"status"`
-	Channel      string `json:"channel"`
-	Event        string `json:"event"`
-	ClientID     string `json:"client_id"`
+	ResponseTime                 string `json:"response_time"`
+	Status                       string `json:"status"`
+	Channel                      string `json:"channel"`
+	Event                        string `json:"event"`
+	ClientID                     string `json:"client_id"`
+	ConnID                       string `json:"conn_id"`
+	ConnTraceID                  string `json:"conn_trace_id"`
+	TraceID                      string `json:"trace_id"`
+	XInTime                      int64  `json:"x_in_time"`
+	XOutTime                     int64  `json:"x_out_time"`
+	XGateRatelimitRequestsRemain int    `json:"x_gate_ratelimit_requests_remain"`
+	XGateRatelimitLimit          int    `json:"x_gate_ratelimit_limit"`
+	XGateRatelimitResetTimestamp int64  `json:"x_gate_ratelimit_reset_timestamp"`
 }
 
 func (u *UpdateMsg) GetChannel() string {
