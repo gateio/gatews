@@ -153,7 +153,7 @@ func (ws *WsService) readMsg() {
 						ws.Logger.Println("reconnect success, continue read message")
 						continue
 					}
-
+					ws.Logger.Println("received message:", string(rawMsg))
 					var msg UpdateMsg
 					if err := json.Unmarshal(rawMsg, &msg); err != nil {
 						continue
@@ -212,9 +212,7 @@ func (ws *WsService) receiveCallMsg(channel string, msgCh chan *UpdateMsg) {
 
 func (ws *WsService) APIRequest(channel string, payload any, keyVals map[string]any) error {
 	var err error
-	ws.loginOnce.Do(func() {
-		err = ws.login()
-	})
+	err = ws.Login()
 
 	if err != nil {
 		return err
@@ -237,6 +235,14 @@ func (ws *WsService) APIRequest(channel string, payload any, keyVals map[string]
 	ws.readMsg()
 
 	return ws.apiRequest(channel, payload, keyVals)
+}
+
+func (ws *WsService) Login() error {
+	var err error
+	ws.loginOnce.Do(func() {
+		err = ws.login()
+	})
+	return err
 }
 
 func (ws *WsService) login() error {
