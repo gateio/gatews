@@ -145,15 +145,15 @@ func (ws *WsService) readMsg() {
 				default:
 					_, rawMsg, err := ws.Client.ReadMessage()
 					if err != nil {
-						ws.Logger.Printf("websocket err: %s", err.Error())
+						ws.Logger.Printf("websocket err: %s %s", err.Error(), ws.conf.Key)
 						if e := ws.reconnect(); e != nil {
 							ws.Logger.Printf("reconnect err:%s", err.Error())
 							return
 						}
-						ws.Logger.Println("reconnect success, continue read message")
+						ws.Logger.Println("reconnect success, continue read message ", ws.conf.Key)
 						continue
 					}
-					ws.Logger.Println("received message:", string(rawMsg))
+					ws.Logger.Println("received message:", string(rawMsg), ws.conf.Key)
 					var msg UpdateMsg
 					if err := json.Unmarshal(rawMsg, &msg); err != nil {
 						continue
