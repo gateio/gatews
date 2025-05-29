@@ -145,15 +145,15 @@ func (ws *WsService) readMsg() {
 				default:
 					_, rawMsg, err := ws.Client.ReadMessage()
 					if err != nil {
-						ws.Logger.Printf("websocket err: %s", err.Error())
+						ws.Logger.Printf("websocket err: %s %s", err.Error(), ws.conf.Key)
 						if e := ws.reconnect(); e != nil {
 							ws.Logger.Printf("reconnect err:%s", err.Error())
 							return
 						}
-						ws.Logger.Println("reconnect success, continue read message")
+						ws.Logger.Println("reconnect success, continue read message ", ws.conf.Key)
 						continue
 					}
-
+					ws.Logger.Println("received message:", string(rawMsg), ws.conf.Key)
 					var msg UpdateMsg
 					if err := json.Unmarshal(rawMsg, &msg); err != nil {
 						continue
@@ -212,9 +212,7 @@ func (ws *WsService) receiveCallMsg(channel string, msgCh chan *UpdateMsg) {
 
 func (ws *WsService) APIRequest(channel string, payload any, keyVals map[string]any) error {
 	var err error
-	ws.loginOnce.Do(func() {
-		err = ws.login()
-	})
+	err = ws.Login()
 
 	if err != nil {
 		return err
@@ -237,6 +235,14 @@ func (ws *WsService) APIRequest(channel string, payload any, keyVals map[string]
 	ws.readMsg()
 
 	return ws.apiRequest(channel, payload, keyVals)
+}
+
+func (ws *WsService) Login() error {
+	var err error
+	ws.loginOnce.Do(func() {
+		err = ws.login()
+	})
+	return err
 }
 
 func (ws *WsService) login() error {
