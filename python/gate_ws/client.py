@@ -193,7 +193,7 @@ class Connection(object):
         self.sending_queue = asyncio.Queue()
         self.sending_history = list()
         self.event_loop: asyncio.AbstractEventLoop = (
-            cfg.loop or asyncio.get_event_loop()
+            cfg.loop or asyncio.new_event_loop()
         )
         self.main_loop = None
 
