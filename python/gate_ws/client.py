@@ -37,6 +37,7 @@ class Configuration(object):
         event_loop=None,
         executor_pool=None,
         default_callback=None,
+        add_local_ts: bool = False,
         ping_interval: int = 5,
         max_retry: int = 10,
         verify: bool = True,
@@ -71,6 +72,7 @@ class Configuration(object):
         self.loop = event_loop
         self.pool = executor_pool
         self.default_callback = default_callback
+        self.add_local_ts = add_local_ts
         self.ping_interval = ping_interval
         self.max_retry = max_retry
         self.verify = verify
@@ -162,7 +164,7 @@ class ApiRequest(object):
 
 
 class WebSocketResponse(object):
-    def __init__(self, body: str):
+    def __init__(self, body: str, local_ts: int = None):
         self.body = body
         msg = json.loads(body)
         self.channel = msg.get("channel") or (msg.get("header") or {}).get("channel")
@@ -170,12 +172,18 @@ class WebSocketResponse(object):
             raise ValueError("no channel found from response message: %s" % body)
 
         self.timestamp = msg.get("time")
+        self.local_ts = local_ts
+
         self.event = msg.get("event")
         self.result = (
             msg.get("result")
             or (msg.get("data") or {}).get("result")
             or (msg.get("data") or {}).get("errs")
         )
+
+        if self.result and self.local_ts:
+            self.result["_local_ts"] = self.local_ts
+
         self.error = None
         if msg.get("error"):
             self.error = GateWebsocketError(
@@ -230,7 +238,13 @@ class Connection(object):
 
     async def _read(self, conn: websockets.WebSocketClientProtocol):
         async for msg in conn:
-            response = WebSocketResponse(msg)
+            
+            if self.cfg.add_local_ts:
+                local_ts = int(time.time() * 1_000_000_000)
+            else:
+                local_ts = None
+            
+            response = WebSocketResponse(msg, local_ts=local_ts)
             callback = self.channels.get(response.channel, self.cfg.default_callback)
             if callback is not None:
                 if asyncio.iscoroutinefunction(callback):
