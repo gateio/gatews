@@ -44,9 +44,13 @@ order_cancel_param = {"currency_pair": "BCH_USDT", "order_id": "1862000415"}
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG, format="%(asctime)s: %(message)s")
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
     cfg = Configuration(
-        api_key="{API_KEY}", # required
-        api_secret="{API_SECRET}", # required
+        api_key="{API_KEY}",  # required
+        api_secret="{API_SECRET}",  # required
+        event_loop=loop
     )
 
     conn = Connection(cfg)
@@ -58,15 +62,17 @@ if __name__ == "__main__":
         order_cancel_param, "header", "req_id"
     )
 
-    loop = asyncio.get_event_loop()
-    loop.create_task(conn.run())
+    tasks: set[asyncio.Task] = {
+        loop.create_task(conn.run()),
+    }
 
     try:
         loop.run_forever()
     except KeyboardInterrupt:
-        tasks = asyncio.Task.all_tasks(loop)
         for task in tasks:
             task.cancel()
+
         group = asyncio.gather(*tasks, return_exceptions=True)
         loop.run_until_complete(group)
+    finally:
         loop.close()

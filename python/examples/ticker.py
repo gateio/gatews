@@ -25,21 +25,26 @@ async def callback(conn: Connection, response: WebSocketResponse):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG, format="%(asctime)s: %(message)s")
-    cfg = Configuration()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    cfg = Configuration(event_loop=loop)
 
     conn = Connection(cfg)
     channel = SpotTickerChannel(conn, callback)
     channel.subscribe(["BTC_USDT"])
 
-    loop = asyncio.get_event_loop()
-    loop.create_task(conn.run())
+    tasks: set[asyncio.Task] = {
+        loop.create_task(conn.run()),
+    }
 
     try:
         loop.run_forever()
     except KeyboardInterrupt:
-        tasks = asyncio.Task.all_tasks(loop)
         for task in tasks:
             task.cancel()
+
         group = asyncio.gather(*tasks, return_exceptions=True)
         loop.run_until_complete(group)
+    finally:
         loop.close()

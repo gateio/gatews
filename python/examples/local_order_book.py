@@ -326,23 +326,33 @@ async def play_order_book(screen: Screen):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR, format="%(asctime)s: %(message)s")
-    conn = Connection(Configuration())
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    cfg = Configuration(event_loop=loop)
+    conn = Connection(cfg)
     demo_cp = 'BTC_USDT'
     order_book = LocalOrderBook(demo_cp)
     channel = SpotOrderBookUpdateChannel(conn, order_book.ws_callback)
     channel.subscribe([demo_cp, "100ms"])
 
-    loop = asyncio.get_event_loop()
-
     screen = Screen.open()
     screen.set_scenes([Scene([OrderBookFrame(screen, order_book)], -1)])
-    loop.create_task(order_book.run())
-    loop.create_task(conn.run())
-    loop.create_task(play_order_book(screen))
+
+    tasks: set[asyncio.Task] = {
+        loop.create_task(order_book.run()),
+        loop.create_task(conn.run()),
+        loop.create_task(play_order_book(screen)),
+    }
+
     try:
         loop.run_forever()
     except KeyboardInterrupt:
-        for task in asyncio.Task.all_tasks(loop):
+        for task in tasks:
             task.cancel()
+
+        group = asyncio.gather(*tasks, return_exceptions=True)
+        loop.run_until_complete(group)
+    finally:
         screen.close()
         loop.close()
