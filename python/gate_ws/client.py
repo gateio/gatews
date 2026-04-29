@@ -215,7 +215,7 @@ class Connection(object):
     def send(self, msg):
         self.sending_queue.put_nowait(msg)
 
-    async def _active_ping(self, conn: websockets.WebSocketClientProtocol):
+    async def _active_ping(self, conn: websockets.ClientProtocol):
         while True:
             data = json.dumps(
                 {"time": int(time.time()), "channel": "%s.ping" % self.cfg.app}
@@ -223,7 +223,7 @@ class Connection(object):
             await conn.send(data)
             await asyncio.sleep(self.cfg.ping_interval)
 
-    async def _write(self, conn: websockets.WebSocketClientProtocol):
+    async def _write(self, conn: websockets.ClientProtocol):
         if self.sending_history:
             for msg in self.sending_history:
                 if isinstance(msg, WebSocketRequest):
@@ -236,7 +236,7 @@ class Connection(object):
                 msg = str(msg)
             await conn.send(msg)
 
-    async def _read(self, conn: websockets.WebSocketClientProtocol):
+    async def _read(self, conn: websockets.ClientProtocol):
         async for msg in conn:
             response = WebSocketResponse(msg)
             callback = self.channels.get(response.channel, self.cfg.default_callback)
