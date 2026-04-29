@@ -24,6 +24,14 @@ class GateWebsocketError(Exception):
     def __str__(self):
         return "code: %d, message: %s" % (self.code, self.message)
 
+class GateWebSocketUpgrade(Exception):
+    """Raised when server requests connection upgrade."""
+    def __init__(self, message: str = None):
+        self.code = None # For compatibility to exception.code usage
+        self.message = message or "Server requests connection upgrade"
+    
+    def __str__(self) -> str:
+        return self.message
 
 class Configuration(object):
     def __init__(
@@ -239,6 +247,9 @@ class Connection(object):
                     self.event_loop.run_in_executor(
                         self.cfg.pool, callback, self, response
                     )
+            
+            if response.event == "upgrade":
+                raise GateWebSocketUpgrade
 
     def close(self):
         if self.main_loop:
@@ -293,6 +304,9 @@ class Connection(object):
                 except asyncio.CancelledError:
                     await conn.close()
                     stopped = True
+                except GateWebSocketUpgrade as exception:
+                    logger.warning("websocket performing hard reconnect, reason: %s" % exception.message)
+                    await conn.close()
                 finally:
                     # user callback tasks are not our concern
                     for task in tasks:
