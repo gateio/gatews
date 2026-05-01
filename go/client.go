@@ -38,7 +38,7 @@ type WsService struct {
 // ConnConf default URL is spot websocket
 type ConnConf struct {
 	App              string
-	subscribeMsg     *sync.Map
+	subscribeMsg     sync.Map
 	URL              string
 	Key              string
 	Secret           string
@@ -116,7 +116,7 @@ func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsS
 		clientMu:  new(sync.Mutex),
 	}
 
-	go ws.activePing()
+	ws.keepAlive()
 
 	return ws, nil
 }
@@ -124,7 +124,6 @@ func NewWsService(ctx context.Context, logger *log.Logger, conf *ConnConf) (*WsS
 func getInitConnConf() *ConnConf {
 	return &ConnConf{
 		App:              "spot",
-		subscribeMsg:     new(sync.Map),
 		MaxRetryConn:     MaxRetryConn,
 		Key:              "",
 		Secret:           "",
@@ -165,7 +164,6 @@ func NewConnConfFromOption(op *ConfOptions) *ConnConf {
 	}
 	return &ConnConf{
 		App:              op.App,
-		subscribeMsg:     new(sync.Map),
 		MaxRetryConn:     op.MaxRetryConn,
 		Key:              op.Key,
 		Secret:           op.Secret,
@@ -215,6 +213,11 @@ func (ws *WsService) reconnect() error {
 	}
 
 	ws.status = connected
+
+	// should login when reconnect
+	if err := ws.login(); err != nil {
+		ws.Logger.Println("reconnect login err:%s", err.Error())
+	}
 
 	// resubscribe after reconnect
 	ws.conf.subscribeMsg.Range(func(key, value interface{}) bool {
@@ -313,45 +316,31 @@ func (ws *WsService) GetConnection() *websocket.Conn {
 	return ws.Client
 }
 
-func (ws *WsService) activePing() {
-	du, err := time.ParseDuration(ws.conf.PingInterval)
-	if err != nil {
-		ws.Logger.Printf("failed to parse ping interval: %s, use default ping interval 10s instead", ws.conf.PingInterval)
-		du, err = time.ParseDuration(DefaultPingInterval)
-		if err != nil {
-			du = time.Second * 10
-		}
-	}
+func (ws *WsService) keepAlive() {
+	var timeout = 10 * time.Second
+	ticker := time.NewTicker(timeout)
 
-	ticker := time.NewTicker(du)
-	defer ticker.Stop()
+	lastResponse := time.Now()
+	ws.Client.SetPongHandler(func(msg string) error {
+		lastResponse = time.Now()
+		return nil
+	})
 
-	for {
-		select {
-		case <-ws.Ctx.Done():
-			return
-		case <-ticker.C:
-			subscribeMap := map[string]int{}
-			ws.conf.subscribeMsg.Range(func(key, value interface{}) bool {
-				splits := strings.Split(key.(string), ".")
-				if len(splits) == 2 {
-					subscribeMap[splits[0]] = 1
-				}
-				return true
-			})
-
-			if ws.status != connected {
-				continue
+	go func() {
+		defer ticker.Stop()
+		for {
+			ws.mu.Lock()
+			err := ws.Client.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(10*time.Second))
+			ws.mu.Unlock()
+			if err != nil {
+				ws.Logger.Printf("send ping err:%s", err.Error())
 			}
-
-			for app := range subscribeMap {
-				channel := app + ".ping"
-				if err := ws.Subscribe(channel, nil); err != nil {
-					ws.Logger.Printf("subscribe channel[%s] failed: %v", channel, err)
-				}
+			<-ticker.C
+			if time.Since(lastResponse) > 30*time.Second {
+				ws.Logger.Printf("ping timeout, should reconnect")
 			}
 		}
-	}
+	}()
 }
 
 var statusString = map[status]string{
