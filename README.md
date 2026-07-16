@@ -1,4 +1,7 @@
 
+> [!WARNING]
+> This repository has been archived and is no longer maintained. The project has moved to **[gate/gatews](https://github.com/gate/gatews)**. Please use the new repository for updates, issues, and pull requests.
+
 # gatews - Gate WebSocket SDK
 
 `gatews` provides new Gate WebSocket V4 implementations. It is intended to
