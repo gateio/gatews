@@ -20,7 +20,7 @@ type FutureOrder struct {
 	Left         int64   `json:"left"`
 	Refu         int32   `json:"refu,omitempty"`
 	User         int32   `json:"user,omitempty"`
-	StpId        int32   `json:"stp_id,omitempty"`
+	StpId        string  `json:"stp_id,omitempty"`
 	IsClose      bool    `json:"is_close,omitempty"`
 	Close        bool    `json:"close,omitempty"`
 	IsLiq        bool    `json:"is_liq,omitempty"`
